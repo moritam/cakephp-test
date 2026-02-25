@@ -16,6 +16,7 @@ declare(strict_types=1);
  */
 namespace App;
 
+use App\Middleware\ApiUnauthorizedMiddleware;
 use App\Middleware\HostHeaderMiddleware;
 use Authentication\AuthenticationService;
 use Authentication\AuthenticationServiceInterface;
@@ -96,12 +97,21 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
 
             // Authentication ミドルウェア（ルーティングとボディパーサーの後）
             ->add(new AuthenticationMiddleware($this))
+            // API 未認証時はリダイレクトせず 401 JSON を返す
+            ->add(new ApiUnauthorizedMiddleware())
 
             // Cross Site Request Forgery (CSRF) Protection Middleware
             // https://book.cakephp.org/5/en/security/csrf.html#cross-site-request-forgery-csrf-middleware
-            ->add(new CsrfProtectionMiddleware([
-                'httponly' => true,
-            ]));
+            ->add((new CsrfProtectionMiddleware(['httponly' => true]))
+                ->skipCheckCallback(function ($request) {
+                    $path = $request->getUri()->getPath();
+                    $isJson = $request->is('json') || str_contains($request->getHeaderLine('Accept'), 'application/json');
+                    if (!$isJson) {
+                        return false;
+                    }
+                    return str_starts_with($path, '/api/')
+                        || in_array($path, ['/users/login', '/users/logout', '/users/add'], true);
+                }));
 
         return $middlewareQueue;
     }

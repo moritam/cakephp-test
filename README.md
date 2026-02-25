@@ -56,4 +56,37 @@ Other environment agnostic settings can be changed in `config/app.php`.
 The app skeleton uses [Milligram](https://milligram.io/) (v1.3) minimalist CSS
 framework by default. You can, however, replace it with any other library or
 custom styles.
-# cakephp-test
+
+## Vue SPA（フロント全面 Vue 化）
+
+全画面は Vue 3 + Vite + Vue Router で構成されています。
+
+### 開発
+
+1. CakePHP サーバを起動（別ターミナル）:
+   ```bash
+   bin/cake server -p 8765
+   ```
+2. フロント開発サーバを起動:
+   ```bash
+   cd frontend && npm run dev
+   ```
+3. ブラウザで `http://localhost:5173/app/` を開く（API は 8765 にプロキシされます）。
+
+### 本番ビルド
+
+```bash
+cd frontend && npm run build
+```
+
+ビルド成果物は `webroot/app/` に出力されます。CakePHP のルート `/` は `/app` にリダイレクトされ、`/app` および `/app/*` で Vue アプリが配信されます。
+
+### 画面一覧
+
+- `/app` … Todo 一覧へリダイレクト
+- `/app/todos` … Todo 一覧
+- `/app/todos/new` … Todo 追加
+- `/app/todos/:id` … Todo 詳細
+- `/app/todos/:id/edit` … Todo 編集
+- `/app/login` … ログイン
+- `/app/register` … ユーザー登録

@@ -45,15 +45,28 @@ class UsersController extends AppController
         $result = $this->Authentication->getResult();
 
         if ($result && $result->isValid()) {
+            if ($this->request->is('json') || $this->request->accepts('application/json')) {
+                return $this->response
+                    ->withType('application/json')
+                    ->withStringBody((string)json_encode(['success' => true], JSON_THROW_ON_ERROR));
+            }
             $target = $this->Authentication->getLoginRedirect() ?? [
                 'controller' => 'Todos',
                 'action' => 'index',
             ];
-
             return $this->redirect($target);
         }
 
         if ($this->request->is('post')) {
+            if ($this->request->is('json') || $this->request->accepts('application/json')) {
+                return $this->response
+                    ->withStatus(401)
+                    ->withType('application/json')
+                    ->withStringBody((string)json_encode([
+                        'success' => false,
+                        'message' => __('メールアドレスまたはパスワードが正しくありません。'),
+                    ], JSON_THROW_ON_ERROR));
+            }
             $this->Flash->error(__('メールアドレスまたはパスワードが正しくありません。'));
         }
     }
@@ -67,6 +80,11 @@ class UsersController extends AppController
     {
         $this->Authentication->logout();
 
+        if ($this->request->is('json') || $this->request->accepts('application/json')) {
+            return $this->response
+                ->withType('application/json')
+                ->withStringBody((string)json_encode(['success' => true], JSON_THROW_ON_ERROR));
+        }
         return $this->redirect(['controller' => 'Users', 'action' => 'login']);
     }
 
@@ -83,11 +101,25 @@ class UsersController extends AppController
             $user = $this->Users->patchEntity($user, $this->request->getData());
 
             if ($this->Users->save($user)) {
+                if ($this->request->is('json') || $this->request->accepts('application/json')) {
+                    return $this->response
+                        ->withStatus(201)
+                        ->withType('application/json')
+                        ->withStringBody((string)json_encode(['success' => true], JSON_THROW_ON_ERROR));
+                }
                 $this->Flash->success(__('ユーザーを登録しました。ログインしてください。'));
-
                 return $this->redirect(['action' => 'login']);
             }
 
+            if ($this->request->is('json') || $this->request->accepts('application/json')) {
+                return $this->response
+                    ->withStatus(422)
+                    ->withType('application/json')
+                    ->withStringBody((string)json_encode([
+                        'success' => false,
+                        'errors' => $user->getErrors(),
+                    ], JSON_THROW_ON_ERROR));
+            }
             $this->Flash->error(__('ユーザーの登録に失敗しました。もう一度お試しください。'));
         }
 
