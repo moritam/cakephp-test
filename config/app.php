@@ -431,6 +431,18 @@ return [
      */
     'Session' => [
         'defaults' => 'php',
+        // PHP 標準の PHPSESSID だと使用技術がわかるため、アプリ独自の名前にする
+        'cookie' => 'TODOAPP_SESSION',
+        // 操作がないまま経過したらセッションを切る時間 (分)
+        'timeout' => (int)env('SESSION_TIMEOUT', 120),
+        'ini' => [
+            'session.cookie_httponly' => true,
+            'session.cookie_samesite' => 'Lax',
+            // サーバーが発行していないセッション ID を受け付けない (セッション固定攻撃対策)
+            'session.use_strict_mode' => true,
+            'session.use_only_cookies' => true,
+            // session.cookie_secure は config/bootstrap.php で設定する (App.secureCookies)
+        ],
     ],
 
     /**

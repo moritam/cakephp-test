@@ -25,7 +25,8 @@ cd frontend && npm install
 ```
 
 - `config/app_local.php` と `config/.env` は秘密情報を含むため Git 管理外 (`.gitignore`)。設定項目を増やすときは `config/app_local.example.php` も更新する。
-- 本番環境では環境変数で上書きする: `SECURITY_SALT`、`DATABASE_URL`、`DEBUG=false`、`APP_FULL_BASE_URL`。
+- 本番環境では環境変数で上書きする: `SECURITY_SALT`、`DATABASE_URL`、`DEBUG=false`、`APP_FULL_BASE_URL`。必要に応じて `COOKIE_SECURE` (未指定なら debug=false のとき true)、`SESSION_TIMEOUT` (分、既定 120)、`CACHE_RATELIMIT_URL`。
+- Cookie: セッションは `TODOAPP_SESSION` (HttpOnly、SameSite=Lax、strict mode)、CSRF は `csrfToken` (HttpOnly、SameSite=Lax)。`Secure` 属性は両方とも `App.secureCookies` (config/bootstrap.php) に従う。ログイン・ログアウト時にセッション ID は作り直される (Authentication プラグイン)。
 
 ## 開発サーバーの起動
 
@@ -172,5 +173,6 @@ frontend/vite.config.js          # base: /app/、ビルド出力先、開発用�
 
 - 新しいマイグレーションを追加した後に PHPUnit がブートストラップで失敗する場合は、`tmp/tests.sqlite` を削除して再実行する (cakephp/migrations 5.0.1 の Migrator は、テーブルを削除しても `cake_migrations` の適用履歴を消さないため)。
 - `FixedWindowRateLimiter::reset()` (cakephp 5.3) は時間枠を 1 時間と決め打ちしているため使わない。`LoginThrottleMiddleware::resetCounter()` で同じキー規則を使って削除している。
+- `Configure::write()` のドット記法では `session.cookie_secure` のような "." を含む ini キーを書けない (入れ子の配列になり、Session が "setting session failed" で落ちる)。`Session.ini` を配列ごと読み書きする。
 - PHP のテストで `configRequest()` を繰り返し呼ぶと `environment` が再帰マージされ、`REMOTE_ADDR` が配列になる。IP を変えるテストでは毎回 `$this->_request = []` で初期化する。
 - `templates/layout/default.php`、`templates/element/flash/`、`webroot/css/` の CakePHP 標準 CSS は、旧画面の削除後は使われていない。

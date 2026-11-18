@@ -104,6 +104,8 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
             ->add(new CsrfProtectionMiddleware([
                 'httponly' => true,
                 'samesite' => 'Lax',
+                // 本番 (HTTPS) では Secure を付ける (config/bootstrap.php の App.secureCookies)
+                'secure' => (bool)Configure::read('App.secureCookies'),
             ]))
 
             // ログインの総当たり対策 (認証より前: 上限中はパスワード照合まで進ませない)

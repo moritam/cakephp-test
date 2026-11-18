@@ -220,6 +220,17 @@ sequenceDiagram
 - 画面遷移のたびに、ルーターの `beforeEach` が `checkAuth()`（`GET /api/todos` が成功するか）で認証状態を確かめます。
 - 認証方式は `Application::getAuthenticationService()` で設定しています（Session 認証と、email・password による Form 認証）。
 
+### Cookie の設定
+
+| Cookie | 用途 | 属性 |
+|---|---|---|
+| `TODOAPP_SESSION` | ログイン状態（セッション ID） | HttpOnly、SameSite=Lax、本番では Secure |
+| `csrfToken` | CSRF トークンの照合用 | HttpOnly、SameSite=Lax、本番では Secure |
+
+- `Secure` 属性（HTTPS でのみ送信）は、環境変数 `COOKIE_SECURE` で指定します。指定がなければ、本番（`DEBUG=false`）では付け、開発（HTTP）では付けません（`config/bootstrap.php`）。
+- サーバーが発行していないセッション ID は受け付けません（`session.use_strict_mode`）。ログインとログアウトのときには、セッション ID を作り直します。どちらもセッション固定攻撃への対策です。
+- 操作がないまま `SESSION_TIMEOUT` 分（既定 120 分）たつと、セッションは切れます。
+
 ---
 
 ## 7. データベーススキーマ

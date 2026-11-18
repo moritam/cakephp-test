@@ -105,6 +105,16 @@ if (Configure::read('debug')) {
 }
 
 /*
+ * Cookie に Secure 属性 (HTTPS でのみ送信) を付けるか。
+ * 環境変数 COOKIE_SECURE で指定する。未指定なら本番 (debug = false) では付け、開発 (HTTP) では付けない。
+ * セッション Cookie と CSRF Cookie (Application::middleware()) の両方に適用する。
+ */
+$secureCookies = filter_var(env('COOKIE_SECURE', !Configure::read('debug')), FILTER_VALIDATE_BOOLEAN);
+Configure::write('App.secureCookies', $secureCookies);
+// ini のキー "session.cookie_secure" は "." を含むため、Configure のドット記法では書けない (入れ子になってしまう)
+Configure::write('Session.ini', ['session.cookie_secure' => $secureCookies] + (array)Configure::read('Session.ini'));
+
+/*
  * Set the default server timezone. Using UTC makes time calculations / conversions easier.
  * Check https://php.net/manual/en/timezones.php for list of valid timezone strings.
  */
