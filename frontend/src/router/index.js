@@ -43,6 +43,11 @@ const routes = [
         component: () => import('../views/TodoFormView.vue'),
         meta: { mode: 'edit' },
       },
+      {
+        path: 'tags',
+        name: 'TagList',
+        component: () => import('../views/TagListView.vue'),
+      },
     ],
   },
 ]

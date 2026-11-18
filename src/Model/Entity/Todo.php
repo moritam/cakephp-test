@@ -11,27 +11,29 @@ use Cake\ORM\Entity;
  * @property int $id
  * @property int $user_id
  * @property string $title
+ * @property string|null $description
  * @property bool|null $completed
+ * @property string $priority
+ * @property \Cake\I18n\Date|null $due_date
  * @property \Cake\I18n\DateTime|null $created
  * @property \Cake\I18n\DateTime|null $modified
+ * @property \App\Model\Entity\Tag[] $tags
  */
 class Todo extends Entity
 {
     /**
-     * Fields that can be mass assigned using newEntity() or patchEntity().
-     *
-     * Note that when '*' is set to true, this allows all unspecified fields to
-     * be mass assigned. For security purposes, it is advised to set '*' to false
-     * (or remove it), and explicitly make individual fields accessible as needed.
-     *
      * user_id はリクエストから一括代入させない (コントローラーでログインユーザーを設定する)
      *
      * @var array<string, bool>
      */
     protected array $_accessible = [
         'title' => true,
+        'description' => true,
         'completed' => true,
+        'priority' => true,
+        'due_date' => true,
         'created' => true,
         'modified' => true,
+        'tags' => true,
     ];
 }

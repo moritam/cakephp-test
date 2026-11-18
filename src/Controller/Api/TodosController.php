@@ -29,15 +29,41 @@ class TodosController extends AppController
     }
 
     /**
-     * Index (list with pagination)
+     * Index (list with pagination, search, filter, sort)
+     *
+     * Query params:
+     *   q          - keyword search on title
+     *   priority   - high|medium|low
+     *   completed  - 0|1
+     *   tag_id     - integer
+     *   overdue    - 1
+     *   sort       - modified|created|due_date|priority
+     *   direction  - asc|desc
      *
      * @return \Cake\Http\Response
      */
     public function index(): Response
     {
         $this->request->allowMethod(['get']);
-        $query = $this->Todos->find('ownedBy', userId: $this->currentUserId())
-            ->orderByDesc('modified');
+
+        $q = (string)($this->request->getQuery('q') ?? '');
+        $priority = (string)($this->request->getQuery('priority') ?? '');
+        $completed = (string)($this->request->getQuery('completed') ?? '');
+        $tagId = (int)($this->request->getQuery('tag_id') ?? 0);
+        $overdue = (bool)($this->request->getQuery('overdue') ?? false);
+
+        $sortField = (string)($this->request->getQuery('sort') ?? 'modified');
+        $direction = strtolower((string)($this->request->getQuery('direction') ?? 'desc')) === 'asc' ? 'ASC' : 'DESC';
+        if (!in_array($sortField, ['modified', 'created', 'due_date', 'priority'], true)) {
+            $sortField = 'modified';
+        }
+
+        $query = $this->Todos
+            ->find('ownedBy', userId: $this->currentUserId())
+            ->find('filtered', q: $q, priority: $priority, completed: $completed, tagId: $tagId, overdue: $overdue)
+            ->contain(['Tags'])
+            ->orderBy(["Todos.{$sortField}" => $direction]);
+
         $todos = $this->paginate($query, ['limit' => 100]);
         $pagination = $todos->pagingParams();
 
@@ -62,7 +88,7 @@ class TodosController extends AppController
     public function view(?string $id = null): Response
     {
         $this->request->allowMethod(['get']);
-        $todo = $this->getOwnedTodo($id);
+        $todo = $this->getOwnedTodo($id, contain: ['Tags']);
 
         return $this->response
             ->withType('application/json')
@@ -78,9 +104,11 @@ class TodosController extends AppController
     {
         $this->request->allowMethod(['post']);
         $todo = $this->Todos->newEmptyEntity();
-        $todo = $this->Todos->patchEntity($todo, $this->request->getData());
+        $todo = $this->Todos->patchEntity($todo, $this->request->getData(), ['associated' => ['Tags']]);
         $todo->user_id = $this->currentUserId();
         if ($this->Todos->save($todo)) {
+            $todo = $this->getOwnedTodo((string)$todo->id, contain: ['Tags']);
+
             return $this->response
                 ->withStatus(201)
                 ->withType('application/json')
@@ -104,9 +132,11 @@ class TodosController extends AppController
     public function edit(?string $id = null): Response
     {
         $this->request->allowMethod(['put', 'patch']);
-        $todo = $this->getOwnedTodo($id);
-        $todo = $this->Todos->patchEntity($todo, $this->request->getData());
+        $todo = $this->getOwnedTodo($id, contain: ['Tags']);
+        $todo = $this->Todos->patchEntity($todo, $this->request->getData(), ['associated' => ['Tags']]);
         if ($this->Todos->save($todo)) {
+            $todo = $this->getOwnedTodo((string)$todo->id, contain: ['Tags']);
+
             return $this->response
                 ->withType('application/json')
                 ->withStringBody((string)json_encode(['todo' => $todo], JSON_THROW_ON_ERROR));
@@ -149,13 +179,15 @@ class TodosController extends AppController
      * ログイン中のユーザーが所有する Todo を取得する (なければ 404)
      *
      * @param string|null $id Todo id.
+     * @param array<string> $contain 関連モデル
      * @return \App\Model\Entity\Todo
      * @throws \Cake\Datasource\Exception\RecordNotFoundException
      */
-    private function getOwnedTodo(?string $id): Todo
+    private function getOwnedTodo(?string $id, array $contain = []): Todo
     {
         /** @var \App\Model\Entity\Todo */
         return $this->Todos->find('ownedBy', userId: $this->currentUserId())
+            ->contain($contain)
             ->where(['Todos.id' => (int)$id])
             ->firstOrFail();
     }

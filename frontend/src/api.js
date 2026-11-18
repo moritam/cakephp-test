@@ -39,9 +39,20 @@ async function request(path, options = {}, retried = false) {
   return r
 }
 
+function buildQuery(params) {
+  const qs = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== '' && v !== null && v !== undefined && v !== false && v !== 0) {
+      qs.append(k, String(v))
+    }
+  })
+  const s = qs.toString()
+  return s ? `?${s}` : ''
+}
+
 export const api = {
-  async getTodos() {
-    const r = await request('/api/todos')
+  async getTodos(params = {}) {
+    const r = await request(`/api/todos${buildQuery(params)}`)
     if (!r.ok) throw new Error(r.status === 401 ? 'Unauthorized' : await r.text())
     return r.json()
   },
@@ -84,8 +95,25 @@ export const api = {
       body: { email, password },
     })
     const data = await r.json().catch(() => ({}))
-    if (!r.ok) throw new Error(data.errors ? JSON.stringify(data.errors) : 'Register failed')
+    if (!r.ok) {
+      throw new Error(data.message || (data.errors ? JSON.stringify(data.errors) : '登録に失敗しました。'))
+    }
     return data
+  },
+
+  async getTags() {
+    const r = await request('/api/tags')
+    if (!r.ok) throw new Error(r.status === 401 ? 'Unauthorized' : await r.text())
+    return r.json()
+  },
+  async createTag(data) {
+    const r = await request('/api/tags', { method: 'POST', body: data })
+    if (!r.ok) throw new Error(await r.text())
+    return r.json()
+  },
+  async deleteTag(id) {
+    const r = await request(`/api/tags/${id}`, { method: 'DELETE' })
+    if (r.status !== 204 && !r.ok) throw new Error(await r.text())
   },
 }
 

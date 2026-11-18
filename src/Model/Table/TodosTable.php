@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use Cake\I18n\Date;
 use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -25,6 +26,7 @@ use Cake\Validation\Validator;
  * @method iterable<\App\Model\Entity\Todo>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Todo>|false deleteMany(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\Todo>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Todo> deleteManyOrFail(iterable $entities, array $options = [])
  * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $Users
+ * @property \App\Model\Table\TagsTable&\Cake\ORM\Association\BelongsToMany $Tags
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
 class TodosTable extends Table
@@ -49,6 +51,12 @@ class TodosTable extends Table
             'foreignKey' => 'user_id',
             'joinType' => 'INNER',
         ]);
+
+        $this->belongsToMany('Tags', [
+            'foreignKey' => 'todo_id',
+            'targetForeignKey' => 'tag_id',
+            'joinTable' => 'tags_todos',
+        ]);
     }
 
     /**
@@ -63,6 +71,46 @@ class TodosTable extends Table
     public function findOwnedBy(SelectQuery $query, int $userId): SelectQuery
     {
         return $query->where([$this->aliasField('user_id') => $userId]);
+    }
+
+    /**
+     * 検索・フィルター・ソート用カスタムファインダー
+     *
+     * 使い方: $this->Todos->find('filtered', q: '...', priority: 'high', ...)
+     *
+     * @param \Cake\ORM\Query\SelectQuery $query The query.
+     * @param string $q キーワード検索
+     * @param string $priority 優先度 (high|medium|low|'')
+     * @param string $completed 完了状態 ('0'|'1'|'')
+     * @param int $tagId タグ ID でフィルター (0 = 未指定)
+     * @param bool $overdue 期限切れのみ
+     * @return \Cake\ORM\Query\SelectQuery
+     */
+    public function findFiltered(
+        SelectQuery $query,
+        string $q = '',
+        string $priority = '',
+        string $completed = '',
+        int $tagId = 0,
+        bool $overdue = false,
+    ): SelectQuery {
+        if ($q !== '') {
+            $query->where(['Todos.title LIKE' => '%' . $q . '%']);
+        }
+        if ($priority !== '') {
+            $query->where(['Todos.priority' => $priority]);
+        }
+        if ($completed !== '') {
+            $query->where(['Todos.completed' => (bool)(int)$completed]);
+        }
+        if ($tagId > 0) {
+            $query->matching('Tags', fn(SelectQuery $q2) => $q2->where(['Tags.id' => $tagId]));
+        }
+        if ($overdue) {
+            $query->where(['Todos.due_date <' => Date::today()->toDateString(), 'Todos.completed' => false]);
+        }
+
+        return $query;
     }
 
     /**
@@ -96,6 +144,18 @@ class TodosTable extends Table
         $validator
             ->boolean('completed')
             ->allowEmptyString('completed');
+
+        $validator
+            ->scalar('description')
+            ->allowEmptyString('description');
+
+        $validator
+            ->inList('priority', ['high', 'medium', 'low'])
+            ->allowEmptyString('priority');
+
+        $validator
+            ->date('due_date')
+            ->allowEmptyDate('due_date');
 
         return $validator;
     }

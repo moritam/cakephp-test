@@ -62,6 +62,12 @@ return function (RouteBuilder $routes): void {
             ->setPass(['id']);
         $builder->delete('/todos/{id}', ['controller' => 'Todos', 'action' => 'delete', 'prefix' => 'Api'])
             ->setPass(['id']);
+
+        // Tags
+        $builder->get('/tags', ['controller' => 'Tags', 'action' => 'index', 'prefix' => 'Api']);
+        $builder->post('/tags', ['controller' => 'Tags', 'action' => 'add', 'prefix' => 'Api']);
+        $builder->delete('/tags/{id}', ['controller' => 'Tags', 'action' => 'delete', 'prefix' => 'Api'])
+            ->setPass(['id']);
     });
 
     $routes->scope('/', function (RouteBuilder $builder): void {
