@@ -133,6 +133,19 @@ return [
             'duration' => '+1 years',
             'url' => env('CACHE_CAKEMODEL_URL', null),
         ],
+
+        /*
+         * ログイン試行回数のカウント (LoginThrottleMiddleware)。
+         * 複数台のサーバーで動かす場合は、CACHE_RATELIMIT_URL で Redis などの共有キャッシュを指定する。
+         */
+        'rate_limit' => [
+            'className' => FileEngine::class,
+            'prefix' => 'myapp_rate_limit_',
+            'path' => CACHE . 'rate_limit' . DS,
+            'serialize' => true,
+            'duration' => '+1 hours',
+            'url' => env('CACHE_RATELIMIT_URL', null),
+        ],
     ],
 
     /*

@@ -80,6 +80,7 @@ src/
 │       └── TodosController.php  # Todo REST API (JSON)
 ├── Middleware/
 │   ├── ApiUnauthorizedMiddleware.php  # /api への未認証アクセスに 401 JSON を返す
+│   ├── LoginThrottleMiddleware.php    # ログイン失敗回数の制限 (超過で 429)
 │   └── HostHeaderMiddleware.php       # 本番環境での Host ヘッダー検証
 └── Model/
     ├── Entity/                  # Todo.php, User.php (パスワードは自動ハッシュ化・JSON 非公開)
@@ -145,6 +146,7 @@ frontend/vite.config.js          # base: /app/、ビルド出力先、開発用�
 - ルートは `config/routes.php` に明示したものだけを公開する (`fallbacks()` は使わない)。
 - `/api/*` はログインが必要。未認証のときは 401 `{"error":"Unauthorized"}` を返す。
 - バリデーションエラーのときは 422 `{"errors": {...}}` を返す。
+- ログインの失敗 (401) は `LoginThrottleMiddleware` が数え、15 分間に「同じ IP + メールアドレス」で 5 回、「同じ IP」で 20 回を超えると 429 (`Retry-After` 付き) を返す。成功すると「IP + メールアドレス」のカウントは 0 に戻る。カウントは Cache 設定 `rate_limit` に保存する (`bin/cake cache clear rate_limit` で解除)。IP は `REMOTE_ADDR` を使う (リバースプロキシ配下では trustProxy の設定が必要)。
 - POST / PUT / PATCH / DELETE はすべて CSRF トークンが必要 (例外なし)。トークンは `GET /users/csrf-token` で取得し、`X-CSRF-Token` ヘッダーで送る。`frontend/src/api.js` が自動で付与し、403 のときは取り直して 1 回だけ再送する。
 - PHP のテストで JSON を POST する場合は `enableCsrfToken()` が使えないので、`CsrfProtectionMiddleware::createToken()` で作ったトークンを `csrfToken` Cookie と `X-CSRF-Token` ヘッダーの両方に設定する (`tests/TestCase/Controller/Api/TodosControllerTest.php` の `setUp()` 参照)。
 
@@ -169,4 +171,6 @@ frontend/vite.config.js          # base: /app/、ビルド出力先、開発用�
 ## 既知の注意点
 
 - 新しいマイグレーションを追加した後に PHPUnit がブートストラップで失敗する場合は、`tmp/tests.sqlite` を削除して再実行する (cakephp/migrations 5.0.1 の Migrator は、テーブルを削除しても `cake_migrations` の適用履歴を消さないため)。
+- `FixedWindowRateLimiter::reset()` (cakephp 5.3) は時間枠を 1 時間と決め打ちしているため使わない。`LoginThrottleMiddleware::resetCounter()` で同じキー規則を使って削除している。
+- PHP のテストで `configRequest()` を繰り返し呼ぶと `environment` が再帰マージされ、`REMOTE_ADDR` が配列になる。IP を変えるテストでは毎回 `$this->_request = []` で初期化する。
 - `templates/layout/default.php`、`templates/element/flash/`、`webroot/css/` の CakePHP 標準 CSS は、旧画面の削除後は使われていない。

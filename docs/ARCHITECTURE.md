@@ -74,13 +74,16 @@ flowchart LR
     A --> R["Routing<br/>URL → コントローラー"]
     R --> BP["BodyParser<br/>JSON ボディを解析"]
     BP --> C["CSRF<br/>POST/PUT/PATCH/DELETE は<br/>トークン必須"]
-    C --> Au["Authentication<br/>セッション / フォーム認証"]
+    C --> LT["LoginThrottle<br/>ログイン失敗が多いと 429"]
+    LT --> Au["Authentication<br/>セッション / フォーム認証"]
     Au --> AU["ApiUnauthorized<br/>/api 未認証なら 401 JSON"]
     AU --> Ctrl([コントローラー])
 ```
 
 - `ApiUnauthorizedMiddleware`（`src/Middleware/`）: `/api` で始まるパスに未認証でアクセスされた場合、ログイン画面へリダイレクトせずに `401 {"error":"Unauthorized"}` を返します。SPA はこれを見てログイン画面へ遷移します。
 - CSRF: 状態を変えるリクエスト（POST / PUT / PATCH / DELETE）はすべて、例外なくトークンを検証します。認証より前に置いているので、ログインのリクエストも、ログインが成立する前に検証されます（ログイン CSRF 対策）。
+
+- `LoginThrottleMiddleware`（`src/Middleware/`）: `POST /users/login` の失敗（401）を数えます。15 分間に「同じ IP + 同じメールアドレス」で 5 回、または「同じ IP」で 20 回失敗すると、`429` と `Retry-After` ヘッダーを返します。上限中はパスワードの照合まで進みません。ログインに成功すると「IP + メールアドレス」のカウントは 0 に戻ります。
 
 ### CSRF トークンの受け渡し
 

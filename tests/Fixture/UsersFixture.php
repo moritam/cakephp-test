@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\Fixture;
 
+use Authentication\PasswordHasher\DefaultPasswordHasher;
 use Cake\TestSuite\Fixture\TestFixture;
 
 /**
@@ -21,7 +22,8 @@ class UsersFixture extends TestFixture
             [
                 'id' => 1,
                 'email' => 'alice@example.com',
-                'password' => 'not-a-real-hash',
+                // パスワード: password123
+                'password' => (new DefaultPasswordHasher())->hash('password123'),
                 'created' => '2026-02-23 23:00:00',
                 'modified' => '2026-02-23 23:00:00',
             ],

@@ -18,6 +18,7 @@ namespace App;
 
 use App\Middleware\ApiUnauthorizedMiddleware;
 use App\Middleware\HostHeaderMiddleware;
+use App\Middleware\LoginThrottleMiddleware;
 use Authentication\AuthenticationService;
 use Authentication\AuthenticationServiceInterface;
 use Authentication\AuthenticationServiceProviderInterface;
@@ -104,6 +105,9 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
                 'httponly' => true,
                 'samesite' => 'Lax',
             ]))
+
+            // ログインの総当たり対策 (認証より前: 上限中はパスワード照合まで進ませない)
+            ->add(new LoginThrottleMiddleware())
 
             // Authentication ミドルウェア（ルーティングとボディパーサーの後）
             ->add(new AuthenticationMiddleware($this))
