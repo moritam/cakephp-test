@@ -27,7 +27,7 @@ PHP ファイルに変更がある場合だけ実行する。
 1. `composer test`
 2. マイグレーションを追加した直後でブートストラップが失敗した場合は、`tmp/tests.sqlite` を削除して再実行する (cakephp/migrations 5.0.1 の既知の問題)
 3. テストが失敗したら、テストを書き換えて通すのではなく、まず実装側の誤りを疑う。どちらを直すべきか判断がつかなければユーザーに確認する
-4. 終了コードが 0 以外でも、全テストが通っていることがある (PHPUnit の警告・Incomplete でも 1 になる)。その場合は ✅ ではなく ⚠️ とし、警告と Incomplete の内容を報告する。内容は `vendor/bin/phpunit --display-warnings --display-incomplete` で確認できる
+4. 終了コードが 0 以外でも、全テストが通っていることがある (PHPUnit の警告・Incomplete でも 1 になる)。その場合は ✅ ではなく ⚠️ とし、警告と Incomplete の内容を報告する。内容は `vendor/bin/phpunit --display-warnings --display-incomplete --colors=always` で確認できる
    - 既知の環境要因: `Failed to set "apc.enable_cli=1"` は、ローカルに APCu 拡張がないために出る警告 (phpunit.xml.dist の ini 設定)。今回の変更が原因ではない
 
 ## 4. フロントエンドビルド

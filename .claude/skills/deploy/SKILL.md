@@ -11,7 +11,7 @@ description: Docker で本番デプロイする。テスト → フロントエ�
 
 デプロイ前に以下を確認する。ユーザーが確認済みと言っていなければ、このステップを実行してから先に進む。
 
-1. **ブランチの確認**: `git status --short` を実行し、未コミットの変更がないことを確認する。あれば止まってユーザーに確認する。
+1. **ブランチの確認**: `git status --short` を実行し、未コミットの変更がないことを確認する。あれば止まってユーザーに確認する。続いて `git branch --show-current` でブランチ名を確認し、`main` 以外であればユーザーに確認する。
 2. **テスト**: `composer test` を実行し、全テストが通ることを確認する。失敗したらデプロイを中止する。
 3. **環境変数**: `.env` ファイルが存在するか確認する (`ls -la .env`)。なければ `.env.production.example` をコピーするようユーザーに伝えて止まる。
 
@@ -24,13 +24,13 @@ cp .env.production.example .env
 
 確認が取れたら、以下を順番に実行する。
 
-### 1. フロントエンドビルド
+### 1. ロールバック用スナップショットを保存
+
+現在の `todo-app:latest` を退避する。イメージが存在しない場合（初回デプロイ）はスキップしてよい。
 
 ```bash
-cd frontend && npm run build
+docker tag todo-app:latest todo-app:backup-$(date +%Y%m%d%H%M%S) 2>/dev/null || true
 ```
-
-ビルドエラーがあれば止まる。`webroot/app/` に成果物が出力される。
 
 ### 2. イメージビルド & コンテナ再起動
 
@@ -39,6 +39,7 @@ docker compose up -d --build
 ```
 
 - `--build` でイメージを再ビルドしてから起動する
+- Dockerfile のマルチステージビルドがフロントエンド (`npm run build`) と PHP 依存ライブラリのビルドを内部で行う（ローカルの `npm run build` は不要）
 - entrypoint.sh が自動で `bin/cake migrations migrate` と `bin/cake cache clear_all` を実行する
 
 ### 3. 起動確認
@@ -61,17 +62,19 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:${APP_PORT:-8080}/
 
 ## ロールバック
 
-問題が起きた場合は前のイメージに戻す:
+問題が起きた場合は、デプロイ前に保存したスナップショットに戻す:
 
 ```bash
-# 1つ前のイメージタグを確認
+# 保存したスナップショットを確認 (backup-YYYYMMDDHHMMSS 形式)
 docker images todo-app
 
-# 前のイメージで再起動 (タグを指定)
+# スナップショットを latest に戻して再起動
 docker compose down
-docker tag todo-app:<前のタグ> todo-app:latest
+docker tag todo-app:backup-<YYYYMMDDHHMMSS> todo-app:latest
 docker compose up -d
 ```
+
+スナップショットがない（初回デプロイ失敗など）場合は、`git log` で前のコミットを確認し `docker compose up -d --build` でリビルドする。
 
 ## 注意事項
 
