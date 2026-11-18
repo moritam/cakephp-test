@@ -109,6 +109,17 @@ async function onDragEnd() {
   }
 }
 
+async function toggleComplete(todo) {
+  const original = todo.completed
+  todo.completed = !original
+  try {
+    await api.updateTodo(todo.id, { completed: todo.completed })
+  } catch (e) {
+    todo.completed = original
+    error.value = e.message || '更新に失敗しました。'
+  }
+}
+
 function exportCsv() {
   const params = { ...filters.value }
   delete params.sort
@@ -310,9 +321,14 @@ async function remove(id, title) {
                 </div>
               </td>
               <td class="px-4 py-3 whitespace-nowrap">
-                <span :class="['inline-flex px-2 py-1 text-xs font-medium rounded-full', todo.completed ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200']">
+                <button
+                  type="button"
+                  :class="['inline-flex px-2 py-1 text-xs font-medium rounded-full transition-colors hover:opacity-80', todo.completed ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200']"
+                  :title="todo.completed ? 'クリックで未完了に戻す' : 'クリックで完了にする'"
+                  @click="toggleComplete(todo)"
+                >
                   {{ todo.completed ? 'Done' : 'Not done' }}
-                </span>
+                </button>
               </td>
               <td class="px-4 py-3 whitespace-nowrap text-sm" :class="isOverdue(todo) ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-slate-500 dark:text-slate-400'">
                 {{ formatDueDate(todo.due_date) }}<span v-if="isOverdue(todo)" class="text-xs ml-1">⚠</span>
@@ -362,9 +378,14 @@ async function remove(id, title) {
                 </div>
               </td>
               <td class="px-4 py-3 whitespace-nowrap">
-                <span :class="['inline-flex px-2 py-1 text-xs font-medium rounded-full', todo.completed ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200']">
+                <button
+                  type="button"
+                  :class="['inline-flex px-2 py-1 text-xs font-medium rounded-full transition-colors hover:opacity-80', todo.completed ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200']"
+                  :title="todo.completed ? 'クリックで未完了に戻す' : 'クリックで完了にする'"
+                  @click="toggleComplete(todo)"
+                >
                   {{ todo.completed ? 'Done' : 'Not done' }}
-                </span>
+                </button>
               </td>
               <td class="px-4 py-3 whitespace-nowrap text-sm" :class="isOverdue(todo) ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-slate-500 dark:text-slate-400'">
                 {{ formatDueDate(todo.due_date) }}<span v-if="isOverdue(todo)" class="text-xs ml-1">⚠</span>
