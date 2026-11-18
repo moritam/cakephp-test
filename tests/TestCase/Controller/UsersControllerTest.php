@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
+use Cake\Http\Middleware\CsrfProtectionMiddleware;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -23,16 +24,74 @@ class UsersControllerTest extends TestCase
     ];
 
     /**
-     * JSON リクエストを送る準備
+     * JSON リクエストを送る準備 (SPA と同じく CSRF トークンを Cookie とヘッダーに付ける)
+     *
+     * @param bool $withCsrf CSRF トークンを付けるか
+     * @return void
+     */
+    private function asJson(bool $withCsrf = true): void
+    {
+        $headers = [
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ];
+        if ($withCsrf) {
+            $token = (new CsrfProtectionMiddleware())->createToken();
+            $this->cookie('csrfToken', $token);
+            $headers['X-CSRF-Token'] = $token;
+        }
+        $this->configRequest(['headers' => $headers]);
+    }
+
+    /**
+     * CSRF トークンを取得できる (未ログインでも可、Cookie も発行される)
      *
      * @return void
      */
-    private function asJson(): void
+    public function testCsrfToken(): void
     {
-        $this->configRequest(['headers' => [
-            'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
-        ]]);
+        $this->asJson(false);
+        $this->get('/users/csrf-token');
+
+        $this->assertResponseOk();
+        $this->assertHeader('Cache-Control', 'no-store');
+        $this->assertCookieIsSet('csrfToken');
+        $token = json_decode((string)$this->_response->getBody(), true)['csrfToken'];
+        $this->assertIsString($token);
+        $this->assertNotEmpty($token);
+    }
+
+    /**
+     * CSRF トークンのないログインは 403 で拒否され、ログインも成立しない (ログイン CSRF 対策)
+     *
+     * @return void
+     */
+    public function testLoginWithoutCsrfTokenIsRejected(): void
+    {
+        $this->asJson();
+        $this->post('/users/add', json_encode(['email' => 'csrf@example.com', 'password' => 'password123']));
+        $this->assertResponseCode(201);
+
+        $this->_cookie = [];
+        $this->asJson(false);
+        $this->post('/users/login', json_encode(['email' => 'csrf@example.com', 'password' => 'password123']));
+
+        $this->assertResponseCode(403);
+        $this->assertSessionNotHasKey('Auth');
+    }
+
+    /**
+     * CSRF トークンのない登録は 403 で拒否され、ユーザーは作られない
+     *
+     * @return void
+     */
+    public function testRegisterWithoutCsrfTokenIsRejected(): void
+    {
+        $this->asJson(false);
+        $this->post('/users/add', json_encode(['email' => 'nocsrf@example.com', 'password' => 'password123']));
+
+        $this->assertResponseCode(403);
+        $this->assertFalse($this->getTableLocator()->get('Users')->exists(['email' => 'nocsrf@example.com']));
     }
 
     /**

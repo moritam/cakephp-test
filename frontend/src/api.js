@@ -1,20 +1,42 @@
 const base = ''
+const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS']
 
-function request(path, options = {}) {
-  const url = path.startsWith('http') ? path : base + path
-  const opts = {
+// CSRF トークン (メモリー上に保持。POST/PUT/PATCH/DELETE の X-CSRF-Token ヘッダーに付ける)
+let csrfToken = null
+
+async function fetchCsrfToken() {
+  const r = await fetch(base + '/users/csrf-token', {
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      ...options.headers,
-    },
-    ...options,
+    headers: { Accept: 'application/json' },
+  })
+  if (!r.ok) throw new Error('CSRF トークンを取得できませんでした。')
+  csrfToken = (await r.json()).csrfToken
+  return csrfToken
+}
+
+async function request(path, options = {}, retried = false) {
+  const url = path.startsWith('http') ? path : base + path
+  const method = (options.method || 'GET').toUpperCase()
+  const headers = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...options.headers,
   }
+  if (!SAFE_METHODS.includes(method)) {
+    headers['X-CSRF-Token'] = csrfToken || (await fetchCsrfToken())
+  }
+  const opts = { ...options, method, credentials: 'include', headers }
   if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
     opts.body = JSON.stringify(options.body)
   }
-  return fetch(url, opts)
+
+  const r = await fetch(url, opts)
+  // Cookie 側のトークンが変わった (期限切れ・削除など) 場合は、取り直して 1 回だけ再送する
+  if (r.status === 403 && !SAFE_METHODS.includes(method) && !retried) {
+    csrfToken = null
+    return request(path, options, true)
+  }
+  return r
 }
 
 export const api = {

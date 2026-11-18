@@ -26,7 +26,21 @@ class UsersController extends AppController
     public function beforeFilter(EventInterface $event): void
     {
         parent::beforeFilter($event);
-        $this->Authentication->allowUnauthenticated(['login', 'logout', 'add']);
+        $this->Authentication->allowUnauthenticated(['login', 'logout', 'add', 'csrfToken']);
+    }
+
+    /**
+     * CSRF トークンを返す (GET)
+     *
+     * SPA は POST/PUT/PATCH/DELETE の X-CSRF-Token ヘッダーにこの値を付ける。
+     * 他サイトの JavaScript は CORS によりこのレスポンスを読めないため、トークンは漏れない。
+     *
+     * @return \Cake\Http\Response
+     */
+    public function csrfToken(): Response
+    {
+        return $this->json(['csrfToken' => $this->request->getAttribute('csrfToken')])
+            ->withHeader('Cache-Control', 'no-store');
     }
 
     /**

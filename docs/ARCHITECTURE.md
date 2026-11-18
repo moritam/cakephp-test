@@ -73,14 +73,35 @@ flowchart LR
     H --> A["Asset<br/>プラグインの静的ファイル"]
     A --> R["Routing<br/>URL → コントローラー"]
     R --> BP["BodyParser<br/>JSON ボディを解析"]
-    BP --> Au["Authentication<br/>セッション / フォーム認証"]
+    BP --> C["CSRF<br/>POST/PUT/PATCH/DELETE は<br/>トークン必須"]
+    C --> Au["Authentication<br/>セッション / フォーム認証"]
     Au --> AU["ApiUnauthorized<br/>/api 未認証なら 401 JSON"]
-    AU --> C["CSRF<br/>JSON の API・ユーザー系は検査しない"]
-    C --> Ctrl([コントローラー])
+    AU --> Ctrl([コントローラー])
 ```
 
 - `ApiUnauthorizedMiddleware`（`src/Middleware/`）: `/api` で始まるパスに未認証でアクセスされた場合、ログイン画面へリダイレクトせずに `401 {"error":"Unauthorized"}` を返します。SPA はこれを見てログイン画面へ遷移します。
-- CSRF: JSON リクエストのうち、`/api/*` と `/users/login`・`/users/logout`・`/users/add` は検査対象外です。
+- CSRF: 状態を変えるリクエスト（POST / PUT / PATCH / DELETE）はすべて、例外なくトークンを検証します。認証より前に置いているので、ログインのリクエストも、ログインが成立する前に検証されます（ログイン CSRF 対策）。
+
+### CSRF トークンの受け渡し
+
+```mermaid
+sequenceDiagram
+    participant V as 🌐 Vue SPA（api.js）
+    participant S as ⚙️ CakePHP
+
+    V->>S: GET /users/csrf-token
+    S-->>V: {"csrfToken": "…"}<br/>Set-Cookie: csrfToken（HttpOnly）
+    V->>V: トークンをメモリーに保持
+    V->>S: POST /api/todos<br/>X-CSRF-Token ヘッダー + Cookie
+    S->>S: ヘッダーと Cookie のトークンを照合
+    S-->>V: 201
+
+    Note over V,S: Cookie が変わって 403 になった場合
+    V->>S: GET /users/csrf-token（取り直し）
+    V->>S: 同じリクエストを 1 回だけ再送
+```
+
+他のサイトの JavaScript は、CORS の制限で `/users/csrf-token` のレスポンスを読めず、`X-CSRF-Token` のような独自ヘッダーも付けられません。そのため、他のサイトからのリクエストは 403 で拒否されます。
 
 ---
 
@@ -138,6 +159,7 @@ flowchart LR
         R2["/users/login"] --> UL["Users::login"]
         R3["/users/logout"] --> UO["Users::logout"]
         R4["/users/add"] --> UA["Users::add"]
+        R5["GET /users/csrf-token"] --> UC["Users::csrfToken"]
     end
 
     ATI & ATV & ATA & ATE & ATD --> ATC["Api\\TodosController"]
@@ -329,6 +351,7 @@ todo_app/
 - `SpaController::index` / `redirectToApp` - SPA の配信、`/` から `/app` へのリダイレクト
 - `UsersController::login` - ログイン
 - `UsersController::add` - ユーザー登録
+- `UsersController::csrfToken` - CSRF トークン取得
 - `UsersController::logout` - ログアウト（未ログインでも成功扱い）
 
 ### 認証必須のアクション

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller\Api;
 
+use Cake\Http\Middleware\CsrfProtectionMiddleware;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -33,9 +34,13 @@ class TodosControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // SPA と同じく、CSRF トークンを Cookie と X-CSRF-Token ヘッダーの両方に付ける
+        $token = (new CsrfProtectionMiddleware())->createToken();
+        $this->cookie('csrfToken', $token);
         $this->configRequest(['headers' => [
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
+            'X-CSRF-Token' => $token,
         ]]);
     }
 
@@ -130,6 +135,26 @@ class TodosControllerTest extends TestCase
         $id = $this->json()['todo']['id'];
         $todo = $this->getTableLocator()->get('Todos')->get($id);
         $this->assertSame(1, $todo->user_id);
+    }
+
+    /**
+     * CSRF トークンのない作成リクエストは 403 で拒否され、Todo は作られない
+     * (他サイトからのフォーム送信を想定: フォーム形式 + Accept: application/json)
+     *
+     * @return void
+     */
+    public function testAddWithoutCsrfTokenIsRejected(): void
+    {
+        $this->loginAs(1);
+        $this->_cookie = [];
+        $this->configRequest(['headers' => [
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/x-www-form-urlencoded',
+        ]]);
+        $this->post('/api/todos', ['title' => 'CSRF']);
+
+        $this->assertResponseCode(403);
+        $this->assertFalse($this->getTableLocator()->get('Todos')->exists(['title' => 'CSRF']));
     }
 
     /**

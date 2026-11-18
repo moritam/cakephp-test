@@ -134,6 +134,7 @@ frontend/vite.config.js          # base: /app/、ビルド出力先、開発用�
 | POST | `/users/add` | ユーザー登録 |
 | POST | `/users/login` | ログイン |
 | POST | `/users/logout` | ログアウト |
+| GET | `/users/csrf-token` | CSRF トークン取得 |
 | GET | `/api/todos` | Todo 一覧取得 (更新日時の降順、最大 100 件) |
 | POST | `/api/todos` | Todo 作成 |
 | GET | `/api/todos/:id` | Todo 取得 |
@@ -144,7 +145,8 @@ frontend/vite.config.js          # base: /app/、ビルド出力先、開発用�
 - ルートは `config/routes.php` に明示したものだけを公開する (`fallbacks()` は使わない)。
 - `/api/*` はログインが必要。未認証のときは 401 `{"error":"Unauthorized"}` を返す。
 - バリデーションエラーのときは 422 `{"errors": {...}}` を返す。
-- JSON リクエストでは `/api/*` と `/users/{login,logout,add}` の CSRF チェックを行わない (`Application::middleware()`)。
+- POST / PUT / PATCH / DELETE はすべて CSRF トークンが必要 (例外なし)。トークンは `GET /users/csrf-token` で取得し、`X-CSRF-Token` ヘッダーで送る。`frontend/src/api.js` が自動で付与し、403 のときは取り直して 1 回だけ再送する。
+- PHP のテストで JSON を POST する場合は `enableCsrfToken()` が使えないので、`CsrfProtectionMiddleware::createToken()` で作ったトークンを `csrfToken` Cookie と `X-CSRF-Token` ヘッダーの両方に設定する (`tests/TestCase/Controller/Api/TodosControllerTest.php` の `setUp()` 参照)。
 
 ## 画面 URL
 

@@ -75,6 +75,7 @@ return function (RouteBuilder $routes): void {
         $builder->connect('/users/login', ['controller' => 'Users', 'action' => 'login']);
         $builder->connect('/users/logout', ['controller' => 'Users', 'action' => 'logout']);
         $builder->connect('/users/add', ['controller' => 'Users', 'action' => 'add']);
+        $builder->get('/users/csrf-token', ['controller' => 'Users', 'action' => 'csrfToken']);
 
         // fallbacks() は使わない: 定義したルート以外のコントローラー・アクションは公開しない
     });

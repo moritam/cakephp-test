@@ -95,25 +95,20 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
             // https://book.cakephp.org/5/en/controllers/middleware.html#body-parser-middleware
             ->add(new BodyParserMiddleware())
 
+            // Cross Site Request Forgery (CSRF) Protection Middleware
+            // https://book.cakephp.org/5/en/security/csrf.html#cross-site-request-forgery-csrf-middleware
+            // - 認証より前に置く: ログインの POST も、ログインが成立する前に CSRF トークンを検証する
+            // - 例外は設けない: POST/PUT/PATCH/DELETE はすべて X-CSRF-Token ヘッダー (または _csrfToken) が必要
+            // - SPA は GET /users/csrf-token でトークンを取得する
+            ->add(new CsrfProtectionMiddleware([
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ]))
+
             // Authentication ミドルウェア（ルーティングとボディパーサーの後）
             ->add(new AuthenticationMiddleware($this))
             // API 未認証時はリダイレクトせず 401 JSON を返す
-            ->add(new ApiUnauthorizedMiddleware())
-
-            // Cross Site Request Forgery (CSRF) Protection Middleware
-            // https://book.cakephp.org/5/en/security/csrf.html#cross-site-request-forgery-csrf-middleware
-            ->add((new CsrfProtectionMiddleware(['httponly' => true]))
-                ->skipCheckCallback(function ($request) {
-                    $path = $request->getUri()->getPath();
-                    $isJson = $request->is('json')
-                        || str_contains($request->getHeaderLine('Accept'), 'application/json');
-                    if (!$isJson) {
-                        return false;
-                    }
-
-                    return str_starts_with($path, '/api/')
-                        || in_array($path, ['/users/login', '/users/logout', '/users/add'], true);
-                }));
+            ->add(new ApiUnauthorizedMiddleware());
 
         return $middlewareQueue;
     }
