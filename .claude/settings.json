@@ -1,4 +1,23 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push)",
+      "Bash(composer test*)",
+      "Bash(composer cs-check*)",
+      "Bash(composer cs-fix*)",
+      "Bash(bin/cake migrations migrate*)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(rm -rf*)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
