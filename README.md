@@ -1,92 +1,171 @@
-# CakePHP Application Skeleton
 
-![Build Status](https://github.com/cakephp/app/actions/workflows/ci.yml/badge.svg?branch=5.x)
-[![Total Downloads](https://img.shields.io/packagist/dt/cakephp/app.svg?style=flat-square)](https://packagist.org/packages/cakephp/app)
-[![PHPStan](https://img.shields.io/badge/PHPStan-level%208-brightgreen.svg?style=flat-square)](https://github.com/phpstan/phpstan)
+# Todo App
 
-A skeleton for creating applications with [CakePHP](https://cakephp.org) 5.x.
+CakePHP 5 をバックエンド、Vue 3 をフロントエンドとした Todo 管理アプリです。
 
-The framework source code can be found here: [cakephp/cakephp](https://github.com/cakephp/cakephp).
+## 技術スタック
 
-## Installation
+| レイヤー | 技術 |
+|---|---|
+| バックエンド | CakePHP 5.3, PHP 8.2+ |
+| フロントエンド | Vue 3, Vue Router, Vite |
+| スタイル | Tailwind CSS 4 |
+| データベース | MySQL (デフォルト) |
+| 認証 | CakePHP Authentication プラグイン |
 
-1. Download [Composer](https://getcomposer.org/doc/00-intro.md) or update `composer self-update`.
-2. Run `php composer.phar create-project --prefer-dist cakephp/app [app_name]`.
+## 機能
 
-If Composer is installed globally, run
+- ユーザー登録 / ログイン
+- Todo の作成・一覧・詳細・編集・削除
 
-```bash
-composer create-project --prefer-dist cakephp/app
-```
+## 画面一覧
 
-In case you want to use a custom app dir name (e.g. `/myapp/`):
+| URL | 画面 |
+|---|---|
+| `/app/todos` | Todo 一覧 |
+| `/app/todos/new` | Todo 追加 |
+| `/app/todos/:id` | Todo 詳細 |
+| `/app/todos/:id/edit` | Todo 編集 |
+| `/app/login` | ログイン |
+| `/app/register` | ユーザー登録 |
 
-```bash
-composer create-project --prefer-dist cakephp/app myapp
-```
+## セットアップ
 
-You can now either use your machine's webserver to view the default home page, or start
-up the built-in webserver with:
+### 前提条件
+
+- PHP 8.2+
+- Composer
+- Node.js 18+
+- MySQL
+
+### 手順
+
+1. **依存パッケージのインストール**
+
+   ```bash
+   composer install
+   cd frontend && npm install && cd ..
+   ```
+
+2. **環境設定**
+
+   ```bash
+   cp config/app_local.example.php config/app_local.php
+   ```
+
+   `config/app_local.php` を編集し、データベース接続情報を設定します。
+
+3. **データベースのマイグレーション**
+
+   ```bash
+   bin/cake migrations migrate
+   ```
+
+4. **フロントエンドのビルド**
+
+   ```bash
+   cd frontend && npm run build
+   ```
+
+## 開発
+
+### バックエンド (CakePHP)
 
 ```bash
 bin/cake server -p 8765
 ```
 
-Then visit `http://localhost:8765` to see the welcome page.
+### フロントエンド (Vue + Vite)
 
-## Demo app
-
-Check out the [5.x-demo branch](https://github.com/cakephp/app/tree/5.x-demo), which contains demo migrations and a seeder.
-See the [README](https://github.com/cakephp/app/blob/5.x-demo/README.md) on how to get it running.
-
-## Update
-
-Since this skeleton is a starting point for your application and various files
-would have been modified as per your needs, there isn't a way to provide
-automated upgrades, so you have to do any updates manually.
-
-## Configuration
-
-Read and edit the environment specific `config/app_local.php` and set up the
-`'Datasources'` and any other configuration relevant for your application.
-Other environment agnostic settings can be changed in `config/app.php`.
-
-## Layout
-
-The app skeleton uses [Milligram](https://milligram.io/) (v1.3) minimalist CSS
-framework by default. You can, however, replace it with any other library or
-custom styles.
-
-## Vue SPA（フロント全面 Vue 化）
-
-全画面は Vue 3 + Vite + Vue Router で構成されています。
-
-### 開発
-
-1. CakePHP サーバを起動（別ターミナル）:
-   ```bash
-   bin/cake server -p 8765
-   ```
-2. フロント開発サーバを起動:
-   ```bash
-   cd frontend && npm run dev
-   ```
-3. ブラウザで `http://localhost:5173/app/` を開く（API は 8765 にプロキシされます）。
-
-### 本番ビルド
+別ターミナルで実行します。Vite の開発サーバーは API リクエストを `localhost:8765` にプロキシします。
 
 ```bash
-cd frontend && npm run build
+cd frontend && npm run dev
 ```
 
-ビルド成果物は `webroot/app/` に出力されます。CakePHP のルート `/` は `/app` にリダイレクトされ、`/app` および `/app/*` で Vue アプリが配信されます。
+ブラウザで `http://localhost:5173/app/` を開きます。
 
-### 画面一覧
+## API エンドポイント
 
-- `/app` … Todo 一覧へリダイレクト
-- `/app/todos` … Todo 一覧
-- `/app/todos/new` … Todo 追加
-- `/app/todos/:id` … Todo 詳細
-- `/app/todos/:id/edit` … Todo 編集
-- `/app/login` … ログイン
-- `/app/register` … ユーザー登録
+| メソッド | パス | 説明 |
+|---|---|---|
+| POST | `/api/users/register` | ユーザー登録 |
+| POST | `/api/users/login` | ログイン |
+| POST | `/api/users/logout` | ログアウト |
+| GET | `/api/todos` | Todo 一覧取得 |
+| POST | `/api/todos` | Todo 作成 |
+| GET | `/api/todos/:id` | Todo 取得 |
+| PUT | `/api/todos/:id` | Todo 更新 |
+| DELETE | `/api/todos/:id` | Todo 削除 |
+
+## プロジェクト構成
+
+### バックエンド (CakePHP)
+
+```
+src/
+├── Application.php              # アプリ起動・ミドルウェア登録
+├── Controller/
+│   ├── AppController.php        # 基底コントローラー
+│   ├── SpaController.php        # Vue SPA シェルの配信
+│   ├── TodosController.php      # サーバーサイド Todo 画面
+│   ├── UsersController.php      # ログイン・登録
+│   └── Api/
+│       └── TodosController.php  # Todo REST API
+├── Middleware/
+│   ├── ApiUnauthorizedMiddleware.php
+│   └── HostHeaderMiddleware.php
+├── Model/
+│   ├── Entity/                  # Todo.php, User.php
+│   └── Table/                   # TodosTable.php, UsersTable.php
+└── View/
+    └── AppView.php
+
+config/
+├── app.php                      # メイン設定
+├── app_local.php                # 環境別ローカル設定
+├── routes.php                   # ルーティング定義
+├── bootstrap.php
+└── Migrations/                  # DB マイグレーション
+
+templates/
+├── layout/
+│   ├── default.php
+│   └── spa.php                  # Vue SPA を読み込むレイアウト
+├── Spa/index.php                # SPA エントリーテンプレート
+├── Todos/                       # サーバーレンダリング Todo 画面
+└── Users/                       # ログイン・登録画面
+```
+
+### フロントエンド (Vue.js)
+
+```
+frontend/src/
+├── main.js                      # Vue アプリエントリーポイント
+├── App.vue                      # ルートコンポーネント
+├── api.js                       # API クライアント
+├── router/index.js              # クライアントサイドルーティング
+├── views/
+│   ├── LoginView.vue
+│   ├── RegisterView.vue
+│   ├── TodoListView.vue
+│   ├── TodoDetailView.vue
+│   └── TodoFormView.vue
+├── layouts/
+│   └── AppLayout.vue
+└── components/
+    └── HelloWorld.vue
+```
+
+### その他のディレクトリ
+
+| ディレクトリ | 用途 |
+|---|---|
+| `webroot/` | Web 公開ディレクトリ（フロントエンドビルド出力先: `webroot/app/`） |
+| `tests/` | PHPUnit テストケース・フィクスチャ |
+| `vendor/` | Composer (PHP) 依存パッケージ |
+| `node_modules/` | NPM 依存パッケージ |
+| `css/` | Tailwind CSS 入力ファイル |
+| `tmp/` | キャッシュ・セッション・ログ |
+| `plugins/` | CakePHP プラグイン |
+| `docs/` | ドキュメント（`ARCHITECTURE.md` など） |

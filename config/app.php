@@ -51,6 +51,17 @@ return [
      */
     'App' => [
         'namespace' => 'App',
+        /*
+         * 新規ユーザー登録 (POST /users/add) を受け付けるか。
+         * 個人利用の本番では false にし、ユーザーは `bin/cake user create` で作る。
+         */
+        'registrationEnabled' => filter_var(env('REGISTRATION_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+        /*
+         * リバースプロキシ (Tailscale serve / Funnel、nginx など) の後ろで動かすか。
+         * true のとき、接続元 IP をプロキシが付けた X-Forwarded-For から取る (最後に追加されたアドレス)。
+         * アプリのポートにプロキシ以外から直接つながらない場合だけ true にすること。
+         */
+        'trustProxy' => filter_var(env('TRUST_PROXY', false), FILTER_VALIDATE_BOOLEAN),
         'encoding' => env('APP_ENCODING', 'UTF-8'),
         'defaultLocale' => env('APP_DEFAULT_LOCALE', 'en_US'),
         'defaultTimezone' => env('APP_DEFAULT_TIMEZONE', 'UTC'),

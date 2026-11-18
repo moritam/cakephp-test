@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller\Api;
 
+use Cake\Core\Configure;
 use Cake\Http\Middleware\CsrfProtectionMiddleware;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
@@ -119,6 +120,25 @@ class TodosControllerTest extends TestCase
         $this->get('/api/todos/2');
 
         $this->assertResponseCode(404);
+    }
+
+    /**
+     * 本番設定 (debug = false) でも、API のエラーは JSON で返り、内部の情報は含まない
+     *
+     * @return void
+     */
+    public function testNotFoundIsJsonInProduction(): void
+    {
+        Configure::write('debug', false);
+        $this->loginAs(1);
+        $this->get('/api/todos/2');
+
+        $this->assertResponseCode(404);
+        $this->assertContentType('application/json');
+        $body = json_decode((string)$this->_response->getBody(), true);
+        $this->assertSame(404, $body['code']);
+        $this->assertArrayNotHasKey('file', $body);
+        $this->assertArrayNotHasKey('trace', $body);
     }
 
     /**

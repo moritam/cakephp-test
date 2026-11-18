@@ -46,7 +46,8 @@ return [
         'default' => [
             'className' => \Cake\Database\Connection::class,
             'driver' => \Cake\Database\Driver\Sqlite::class,
-            'database' => TMP . 'todo_app.sqlite',
+            // DATABASE_PATH で SQLite ファイルの場所を変えられる (Docker では /data/todo_app.sqlite)
+            'database' => env('DATABASE_PATH', TMP . 'todo_app.sqlite'),
             'encoding' => 'utf8',
             'timezone' => 'UTC',
             'flags' => [],

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
+use Cake\Core\Configure;
 use Cake\Http\Middleware\CsrfProtectionMiddleware;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
@@ -132,6 +133,23 @@ class UsersControllerTest extends TestCase
         $this->assertResponseCode(422);
         $this->assertResponseContains('"email"');
         $this->assertResponseContains('"password"');
+    }
+
+    /**
+     * 新規登録を止めている場合は 403 で、ユーザーは作られない
+     *
+     * @return void
+     */
+    public function testRegisterDisabled(): void
+    {
+        Configure::write('App.registrationEnabled', false);
+        $this->asJson();
+        $this->post('/users/add', json_encode(['email' => 'blocked@example.com', 'password' => 'password123']));
+
+        $this->assertResponseCode(403);
+        $body = json_decode((string)$this->_response->getBody(), true);
+        $this->assertSame('新規登録は現在受け付けていません。', $body['message']);
+        $this->assertFalse($this->getTableLocator()->get('Users')->exists(['email' => 'blocked@example.com']));
     }
 
     /**

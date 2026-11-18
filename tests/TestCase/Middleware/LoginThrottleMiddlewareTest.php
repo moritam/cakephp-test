@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Test\TestCase\Middleware;
 
 use Cake\Cache\Cache;
+use Cake\Core\Configure;
 use Cake\Http\Middleware\CsrfProtectionMiddleware;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
@@ -183,6 +184,35 @@ class LoginThrottleMiddlewareTest extends TestCase
             'X-Forwarded-For' => '192.0.2.99',
         ]);
         $this->assertResponseCode(429);
+    }
+
+    /**
+     * TRUST_PROXY のとき: プロキシが付けた X-Forwarded-For の最後のアドレスで数える
+     * (クライアントが先頭に偽のアドレスを入れても、プロキシが末尾に本当の接続元を追加する)
+     *
+     * @return void
+     */
+    public function testTrustProxyUsesLastForwardedAddress(): void
+    {
+        Configure::write('App.trustProxy', true);
+        for ($i = 1; $i <= 5; $i++) {
+            $this->attemptLogin('alice@example.com', 'wrong-password', '127.0.0.1', [
+                'X-Forwarded-For' => "192.0.2.{$i}, 198.51.100.7",
+            ]);
+            $this->assertResponseCode(401);
+        }
+
+        // 同じ接続元 (末尾が 198.51.100.7) は先頭を変えてもロックされる
+        $this->attemptLogin('alice@example.com', 'password123', '127.0.0.1', [
+            'X-Forwarded-For' => '192.0.2.99, 198.51.100.7',
+        ]);
+        $this->assertResponseCode(429);
+
+        // 別の接続元 (同じプロキシ経由) は影響を受けない
+        $this->attemptLogin('alice@example.com', 'password123', '127.0.0.1', [
+            'X-Forwarded-For' => '198.51.100.8',
+        ]);
+        $this->assertResponseOk();
     }
 
     /**

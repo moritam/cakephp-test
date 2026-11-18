@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use Cake\Event\EventInterface;
+use Cake\View\JsonView;
 
 /**
  * Error Handling Controller
@@ -43,6 +44,17 @@ class ErrorController extends AppController
      */
     public function beforeFilter(EventInterface $event): void
     {
+    }
+
+    /**
+     * Accept: application/json のリクエスト (SPA からの API 呼び出し) には JSON でエラーを返す。
+     * それ以外は従来どおり HTML のエラーページ。
+     *
+     * @return array<string>
+     */
+    public function viewClasses(): array
+    {
+        return [JsonView::class];
     }
 
     /**

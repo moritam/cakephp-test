@@ -19,6 +19,7 @@ namespace App;
 use App\Middleware\ApiUnauthorizedMiddleware;
 use App\Middleware\HostHeaderMiddleware;
 use App\Middleware\LoginThrottleMiddleware;
+use App\Middleware\TrustProxyMiddleware;
 use Authentication\AuthenticationService;
 use Authentication\AuthenticationServiceInterface;
 use Authentication\AuthenticationServiceProviderInterface;
@@ -74,6 +75,9 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
             // Catch any exceptions in the lower layers,
             // and make an error page/response
             ->add(new ErrorHandlerMiddleware(Configure::read('Error'), $this))
+
+            // リバースプロキシの後ろでは X-Forwarded-For から接続元 IP を取る (App.trustProxy)
+            ->add(new TrustProxyMiddleware())
 
             // Validate Host header to prevent Host Header Injection attacks.
             // In production, ensures App.fullBaseUrl is configured and validates

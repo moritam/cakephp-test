@@ -17,9 +17,15 @@ declare(strict_types=1);
 namespace App\Test\TestCase;
 
 use App\Application;
+use App\Middleware\ApiUnauthorizedMiddleware;
 use App\Middleware\HostHeaderMiddleware;
+use App\Middleware\LoginThrottleMiddleware;
+use App\Middleware\TrustProxyMiddleware;
+use Authentication\Middleware\AuthenticationMiddleware;
 use Cake\Core\Configure;
 use Cake\Error\Middleware\ErrorHandlerMiddleware;
+use Cake\Http\Middleware\BodyParserMiddleware;
+use Cake\Http\Middleware\CsrfProtectionMiddleware;
 use Cake\Http\MiddlewareQueue;
 use Cake\Routing\Middleware\AssetMiddleware;
 use Cake\Routing\Middleware\RoutingMiddleware;
@@ -77,12 +83,24 @@ class ApplicationTest extends TestCase
 
         $middleware = $app->middleware($middleware);
 
-        $this->assertInstanceOf(ErrorHandlerMiddleware::class, $middleware->current());
-        $middleware->seek(1);
-        $this->assertInstanceOf(HostHeaderMiddleware::class, $middleware->current());
-        $middleware->seek(2);
-        $this->assertInstanceOf(AssetMiddleware::class, $middleware->current());
-        $middleware->seek(3);
-        $this->assertInstanceOf(RoutingMiddleware::class, $middleware->current());
+        // 順番はセキュリティ上の意味がある:
+        // TrustProxy は IP を使う処理より前、CSRF は LoginThrottle と認証より前
+        $expected = [
+            ErrorHandlerMiddleware::class,
+            TrustProxyMiddleware::class,
+            HostHeaderMiddleware::class,
+            AssetMiddleware::class,
+            RoutingMiddleware::class,
+            BodyParserMiddleware::class,
+            CsrfProtectionMiddleware::class,
+            LoginThrottleMiddleware::class,
+            AuthenticationMiddleware::class,
+            ApiUnauthorizedMiddleware::class,
+        ];
+        $this->assertCount(count($expected), $middleware);
+        foreach ($expected as $i => $class) {
+            $middleware->seek($i);
+            $this->assertInstanceOf($class, $middleware->current(), "position {$i}");
+        }
     }
 }

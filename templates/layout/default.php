@@ -27,7 +27,7 @@ $cakeDescription = 'Todo App';
     <nav class="bg-white shadow-sm border-b border-slate-200">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-14 items-center">
-                <a href="<?= $this->Url->build('/') ?>" class="text-s font-semibold text-slate-800 hover:text-slate-600">
+                <a href="<?= $this->Url->build('/') ?>" class="text-xl font-semibold text-slate-800 hover:text-slate-600">
                     <?= $cakeDescription ?>
                 </a>
                 <div class="flex gap-4">
