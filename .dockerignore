@@ -1,0 +1,21 @@
+# イメージに入れないもの
+.git
+.github
+.env
+.env.*
+!.env.production.example
+.phpunit.cache
+node_modules
+frontend/node_modules
+vendor
+tmp
+logs
+webroot/app
+config/app_local.php
+config/.env
+config/Migrations/schema-dump-*.lock
+tests
+docs
+*.md
+Dockerfile
+compose.yaml

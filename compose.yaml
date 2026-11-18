@@ -1,0 +1,31 @@
+# 本番用 (個人サーバー) の Docker Compose 設定。手順は docs/DEPLOY.md を参照。
+#
+#   cp .env.production.example .env   # 値を設定する
+#   docker compose up -d --build
+#
+# アプリは 127.0.0.1 でだけ待ち受ける。外部からは Tailscale serve / Funnel を経由して HTTPS で接続する。
+services:
+  app:
+    build: .
+    image: todo-app:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:80"
+    environment:
+      DEBUG: "false"
+      SECURITY_SALT: ${SECURITY_SALT:?SECURITY_SALT を .env に設定してください}
+      APP_FULL_BASE_URL: ${APP_FULL_BASE_URL:?APP_FULL_BASE_URL を .env に設定してください}
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      SESSION_TIMEOUT: ${SESSION_TIMEOUT:-120}
+      APP_DEFAULT_TIMEZONE: UTC
+      # ログはファイルではなく標準出力・標準エラーへ (docker compose logs で見る)
+      LOG_DEBUG_URL: "console:///?stream=php://stdout&levels[]=notice&levels[]=info"
+      LOG_ERROR_URL: "console:///?stream=php://stderr&levels[]=warning&levels[]=error&levels[]=critical&levels[]=alert&levels[]=emergency"
+    volumes:
+      - app-data:/data
+
+volumes:
+  # SQLite の DB、セッション、バックアップを保存する
+  app-data:
