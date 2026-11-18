@@ -105,10 +105,12 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
             ->add((new CsrfProtectionMiddleware(['httponly' => true]))
                 ->skipCheckCallback(function ($request) {
                     $path = $request->getUri()->getPath();
-                    $isJson = $request->is('json') || str_contains($request->getHeaderLine('Accept'), 'application/json');
+                    $isJson = $request->is('json')
+                        || str_contains($request->getHeaderLine('Accept'), 'application/json');
                     if (!$isJson) {
                         return false;
                     }
+
                     return str_starts_with($path, '/api/')
                         || in_array($path, ['/users/login', '/users/logout', '/users/add'], true);
                 }));

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use Cake\Event\EventInterface;
 use Cake\Http\Response;
 
 /**
@@ -13,7 +14,7 @@ class SpaController extends AppController
     /**
      * 認証不要
      */
-    public function beforeFilter(\Cake\Event\EventInterface $event): void
+    public function beforeFilter(EventInterface $event): void
     {
         parent::beforeFilter($event);
         $this->Authentication->allowUnauthenticated(['index', 'redirectToApp']);
@@ -38,6 +39,7 @@ class SpaController extends AppController
     {
         $this->viewBuilder()->setLayout('spa');
         $this->viewBuilder()->setTemplate('index');
+
         return null;
     }
 }

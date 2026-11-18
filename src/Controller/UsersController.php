@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use Cake\Event\EventInterface;
+use Cake\Http\Response;
+use Throwable;
+
 /**
  * Users Controller
  *
@@ -14,7 +18,7 @@ class UsersController extends AppController
     /**
      * 認証不要のアクション
      */
-    public function beforeFilter(\Cake\Event\EventInterface $event): void
+    public function beforeFilter(EventInterface $event): void
     {
         parent::beforeFilter($event);
         $this->Authentication->allowUnauthenticated(['login', 'add', 'dbTest']);
@@ -22,13 +26,15 @@ class UsersController extends AppController
 
     /**
      * DB接続テスト用（動作確認後に削除してOK）
+     *
+     * @return \Cake\Http\Response
      */
-    public function dbTest()
+    public function dbTest(): Response
     {
         try {
             $this->Users->find()->first();
             $this->Flash->success('DB接続成功');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->Flash->error('DB接続エラー: ' . $e->getMessage());
         }
 
@@ -54,6 +60,7 @@ class UsersController extends AppController
                 'controller' => 'Todos',
                 'action' => 'index',
             ];
+
             return $this->redirect($target);
         }
 
@@ -85,6 +92,7 @@ class UsersController extends AppController
                 ->withType('application/json')
                 ->withStringBody((string)json_encode(['success' => true], JSON_THROW_ON_ERROR));
         }
+
         return $this->redirect(['controller' => 'Users', 'action' => 'login']);
     }
 
@@ -108,6 +116,7 @@ class UsersController extends AppController
                         ->withStringBody((string)json_encode(['success' => true], JSON_THROW_ON_ERROR));
                 }
                 $this->Flash->success(__('ユーザーを登録しました。ログインしてください。'));
+
                 return $this->redirect(['action' => 'login']);
             }
 

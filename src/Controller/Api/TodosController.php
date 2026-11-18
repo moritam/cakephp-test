@@ -13,6 +13,11 @@ use Cake\Http\Response;
  */
 class TodosController extends AppController
 {
+    /**
+     * Initialization hook method.
+     *
+     * @return void
+     */
     public function initialize(): void
     {
         parent::initialize();
@@ -27,17 +32,18 @@ class TodosController extends AppController
     public function index(): Response
     {
         $this->request->allowMethod(['get']);
-        $query = $this->Todos->find()->orderDesc('modified');
+        $query = $this->Todos->find()->orderByDesc('modified');
         $todos = $this->paginate($query, ['limit' => 100]);
-        $pagination = $this->request->getAttribute('paging')['Todos'] ?? [];
+        $pagination = $todos->pagingParams();
+
         return $this->response
             ->withType('application/json')
             ->withStringBody((string)json_encode([
                 'todos' => $todos,
                 'pagination' => [
-                    'page' => $pagination['page'] ?? 1,
+                    'page' => $pagination['currentPage'] ?? 1,
                     'pageCount' => $pagination['pageCount'] ?? 1,
-                    'count' => $pagination['count'] ?? 0,
+                    'count' => $pagination['totalCount'] ?? 0,
                 ],
             ], JSON_THROW_ON_ERROR));
     }
@@ -52,6 +58,7 @@ class TodosController extends AppController
     {
         $this->request->allowMethod(['get']);
         $todo = $this->Todos->get($id, contain: []);
+
         return $this->response
             ->withType('application/json')
             ->withStringBody((string)json_encode(['todo' => $todo], JSON_THROW_ON_ERROR));
@@ -73,6 +80,7 @@ class TodosController extends AppController
                 ->withType('application/json')
                 ->withStringBody((string)json_encode(['todo' => $todo], JSON_THROW_ON_ERROR));
         }
+
         return $this->response
             ->withStatus(422)
             ->withType('application/json')
@@ -97,6 +105,7 @@ class TodosController extends AppController
                 ->withType('application/json')
                 ->withStringBody((string)json_encode(['todo' => $todo], JSON_THROW_ON_ERROR));
         }
+
         return $this->response
             ->withStatus(422)
             ->withType('application/json')
@@ -116,6 +125,7 @@ class TodosController extends AppController
         $this->request->allowMethod(['delete', 'post']);
         $todo = $this->Todos->get($id);
         $this->Todos->delete($todo);
+
         return $this->response->withStatus(204);
     }
 }

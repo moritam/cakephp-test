@@ -29,6 +29,29 @@ class PagesControllerTest extends TestCase
     use IntegrationTestTrait;
 
     /**
+     * Pages はログイン必須のため、各テストはログイン済みセッションで実行する
+     *
+     * @return void
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->session(['Auth' => ['id' => 1, 'email' => 'test@example.com']]);
+    }
+
+    /**
+     * 未ログインの場合はログイン画面へリダイレクトされる
+     *
+     * @return void
+     */
+    public function testDisplayRequiresLogin()
+    {
+        $this->_session = [];
+        $this->get('/pages/home');
+        $this->assertRedirectContains('/users/login');
+    }
+
+    /**
      * testDisplay method
      *
      * @return void

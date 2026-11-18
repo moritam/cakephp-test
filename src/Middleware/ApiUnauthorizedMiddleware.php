@@ -14,6 +14,13 @@ use Psr\Http\Server\RequestHandlerInterface;
  */
 class ApiUnauthorizedMiddleware implements MiddlewareInterface
 {
+    /**
+     * /api 配下へのリクエストで未認証なら 401 を返し、それ以外は次の処理へ渡す
+     *
+     * @param \Psr\Http\Message\ServerRequestInterface $request The request.
+     * @param \Psr\Http\Server\RequestHandlerInterface $handler The request handler.
+     * @return \Psr\Http\Message\ResponseInterface A response.
+     */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $path = $request->getUri()->getPath();
