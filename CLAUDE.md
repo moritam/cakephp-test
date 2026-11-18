@@ -16,6 +16,17 @@ CakePHP 5 (バックエンド) + Vue 3 (フロントエンド SPA) による Tod
 | データベース | SQLite (`tmp/todo_app.sqlite`、テストは `tmp/tests.sqlite`) |
 | 認証 | CakePHP Authentication プラグイン |
 
+## 初回セットアップ
+
+```bash
+composer install            # config/app_local.example.php から config/app_local.php を生成し、Security.salt をランダムに設定
+bin/cake migrations migrate # tmp/todo_app.sqlite を作成
+cd frontend && npm install
+```
+
+- `config/app_local.php` と `config/.env` は秘密情報を含むため Git 管理外 (`.gitignore`)。設定項目を増やすときは `config/app_local.example.php` も更新する。
+- 本番環境では環境変数で上書きする: `SECURITY_SALT`、`DATABASE_URL`、`DEBUG=false`、`APP_FULL_BASE_URL`。
+
 ## 開発サーバーの起動
 
 ```bash
@@ -76,7 +87,8 @@ src/
 
 config/
 ├── routes.php                   # ルーティング定義
-├── app.php / app_local.php      # アプリ設定 / 環境ごとの設定 (DB 接続は app_local.php で SQLite を指定)
+├── app.php                      # アプリ共通設定
+├── app_local.php                # 環境ごとの設定・秘密情報 (Git 管理外。app_local.example.php から生成)
 ├── plugins.php                  # 読み込むプラグイン
 └── Migrations/                  # DB マイグレーション (CreateTodos, CreateUsers, AddUserIdToTodos)
 

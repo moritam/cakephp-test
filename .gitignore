@@ -5,3 +5,5 @@ logs/
 .DS_Store
 tmp/todo_app.sqlite
 tmp/tests.sqlite
+/config/app_local.php
+/config/.env

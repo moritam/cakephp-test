@@ -295,7 +295,8 @@ todo_app/
 │   └── Model/                # Table (検証ルール) と Entity
 ├── config/
 │   ├── routes.php            # サーバー側ルーティング
-│   ├── app.php, app_local.php# 設定 (DB は app_local.php で SQLite を指定)
+│   ├── app.php               # アプリ共通設定
+│   ├── app_local.php         # 環境ごとの設定・秘密情報 (Git 管理外、example から生成)
 │   └── Migrations/           # CreateTodos, CreateUsers, AddUserIdToTodos
 ├── templates/
 │   ├── layout/spa.php        # SPA のレイアウト
