@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
+use Authentication\PasswordHasher\DefaultPasswordHasher;
 use Cake\Core\Configure;
 use Cake\Http\Middleware\CsrfProtectionMiddleware;
 use Cake\TestSuite\IntegrationTestTrait;
@@ -194,6 +195,108 @@ class UsersControllerTest extends TestCase
 
         $this->get('/users/logout');
         $this->assertRedirect('/app/login');
+    }
+
+    /**
+     * ログイン中のユーザーはパスワードを変更できる
+     *
+     * @return void
+     */
+    public function testChangePasswordSuccess(): void
+    {
+        $this->session(['Auth' => ['id' => 1, 'email' => 'alice@example.com']]);
+        $this->asJson();
+        $this->patch('/users/change-password', json_encode([
+            'current_password' => 'password123',
+            'new_password' => 'newpassword456',
+            'new_password_confirm' => 'newpassword456',
+        ]));
+
+        $this->assertResponseOk();
+        $this->assertSame(['success' => true], json_decode((string)$this->_response->getBody(), true));
+
+        // DB のパスワードが実際に変わっている
+        $user = $this->getTableLocator()->get('Users')->get(1);
+        $hasher = new DefaultPasswordHasher();
+        $this->assertTrue($hasher->check('newpassword456', $user->password));
+        $this->assertFalse($hasher->check('password123', $user->password));
+    }
+
+    /**
+     * 現在のパスワードが違う場合は 422
+     *
+     * @return void
+     */
+    public function testChangePasswordWrongCurrentPassword(): void
+    {
+        $this->session(['Auth' => ['id' => 1, 'email' => 'alice@example.com']]);
+        $this->asJson();
+        $this->patch('/users/change-password', json_encode([
+            'current_password' => 'wrongpassword',
+            'new_password' => 'newpassword456',
+            'new_password_confirm' => 'newpassword456',
+        ]));
+
+        $this->assertResponseCode(422);
+        $body = json_decode((string)$this->_response->getBody(), true);
+        $this->assertArrayHasKey('current_password', $body['errors']);
+    }
+
+    /**
+     * 新しいパスワードと確認が一致しない場合は 422
+     *
+     * @return void
+     */
+    public function testChangePasswordConfirmMismatch(): void
+    {
+        $this->session(['Auth' => ['id' => 1, 'email' => 'alice@example.com']]);
+        $this->asJson();
+        $this->patch('/users/change-password', json_encode([
+            'current_password' => 'password123',
+            'new_password' => 'newpassword456',
+            'new_password_confirm' => 'different789',
+        ]));
+
+        $this->assertResponseCode(422);
+        $body = json_decode((string)$this->_response->getBody(), true);
+        $this->assertArrayHasKey('new_password_confirm', $body['errors']);
+    }
+
+    /**
+     * 新しいパスワードが 8 文字未満の場合は 422
+     *
+     * @return void
+     */
+    public function testChangePasswordTooShort(): void
+    {
+        $this->session(['Auth' => ['id' => 1, 'email' => 'alice@example.com']]);
+        $this->asJson();
+        $this->patch('/users/change-password', json_encode([
+            'current_password' => 'password123',
+            'new_password' => 'short',
+            'new_password_confirm' => 'short',
+        ]));
+
+        $this->assertResponseCode(422);
+        $body = json_decode((string)$this->_response->getBody(), true);
+        $this->assertArrayHasKey('new_password', $body['errors']);
+    }
+
+    /**
+     * 未ログインでのパスワード変更は 401
+     *
+     * @return void
+     */
+    public function testChangePasswordUnauthorized(): void
+    {
+        $this->asJson();
+        $this->patch('/users/change-password', json_encode([
+            'current_password' => 'password123',
+            'new_password' => 'newpassword456',
+            'new_password_confirm' => 'newpassword456',
+        ]));
+
+        $this->assertResponseCode(401);
     }
 
     /**

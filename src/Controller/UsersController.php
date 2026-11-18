@@ -28,7 +28,7 @@ class UsersController extends AppController
     public function beforeFilter(EventInterface $event): void
     {
         parent::beforeFilter($event);
-        $this->Authentication->allowUnauthenticated(['login', 'logout', 'add', 'csrfToken']);
+        $this->Authentication->allowUnauthenticated(['login', 'logout', 'add', 'csrfToken', 'changePassword']);
     }
 
     /**

@@ -246,4 +246,171 @@ class TodosControllerTest extends TestCase
         $this->assertResponseCode(404);
         $this->assertTrue($this->getTableLocator()->get('Todos')->exists(['id' => 2]));
     }
+
+    /**
+     * per_page パラメーターで取得件数を制御できる
+     *
+     * @return void
+     */
+    public function testIndexPagination(): void
+    {
+        // alice の Todo をもう 1 件追加して合計 2 件にする
+        $Todos = $this->getTableLocator()->get('Todos');
+        $todo = $Todos->newEntity(['title' => 'Second Todo', 'completed' => false, 'position' => 10]);
+        $todo->user_id = 1;
+        $Todos->save($todo);
+
+        $this->loginAs(1);
+        $this->get('/api/todos?per_page=1&page=1');
+
+        $this->assertResponseOk();
+        $body = $this->json();
+        $this->assertCount(1, $body['todos']);
+        $this->assertSame(2, $body['pagination']['count']);
+        $this->assertSame(2, $body['pagination']['pageCount']);
+        $this->assertSame(1, $body['pagination']['page']);
+    }
+
+    /**
+     * per_page の上限は 50
+     *
+     * @return void
+     */
+    public function testIndexPerPageCappedAt50(): void
+    {
+        $this->loginAs(1);
+        $this->get('/api/todos?per_page=999');
+
+        $this->assertResponseOk();
+        // 件数は 1 件のままだが、limit が 50 に丸められて例外にならない
+        $this->assertSame(1, $this->json()['pagination']['count']);
+    }
+
+    /**
+     * CSV エクスポートは text/csv を返し、BOM と正しいヘッダー行を含む
+     *
+     * @return void
+     */
+    public function testExportCsv(): void
+    {
+        $this->loginAs(1);
+        $this->get('/api/todos/export');
+
+        $this->assertResponseOk();
+        $this->assertContentType('text/csv');
+        $body = (string)$this->_response->getBody();
+        // BOM チェック
+        $this->assertStringStartsWith("\xEF\xBB\xBF", $body);
+        // ヘッダー行チェック
+        $this->assertStringContainsString('id,title,description,priority,completed,due_date,tags,created,modified', $body);
+        // alice の Todo 1 件だけ含まれる (bob の Todo は含まれない)
+        $this->assertStringContainsString('Lorem ipsum dolor sit amet', $body);
+        $this->assertStringNotContainsString('Bob の Todo', $body);
+    }
+
+    /**
+     * CSV エクスポートには Content-Disposition ヘッダーが付く
+     *
+     * @return void
+     */
+    public function testExportCsvContentDisposition(): void
+    {
+        $this->loginAs(1);
+        $this->get('/api/todos/export');
+
+        $this->assertResponseOk();
+        $disposition = $this->_response->getHeaderLine('Content-Disposition');
+        $this->assertStringStartsWith('attachment; filename=', $disposition);
+        $this->assertStringContainsString('.csv', $disposition);
+    }
+
+    /**
+     * 未ログインのエクスポートは 401
+     *
+     * @return void
+     */
+    public function testExportUnauthorized(): void
+    {
+        $this->get('/api/todos/export');
+
+        $this->assertResponseCode(401);
+    }
+
+    /**
+     * 並び替えで position が更新される
+     *
+     * @return void
+     */
+    public function testReorder(): void
+    {
+        // alice の Todo をもう 1 件追加
+        $Todos = $this->getTableLocator()->get('Todos');
+        $second = $Todos->newEntity(['title' => 'Second', 'completed' => false, 'position' => 10]);
+        $second->user_id = 1;
+        $todo2 = $Todos->save($second);
+
+        $this->loginAs(1);
+        // id=1 を 2番目、$todo2 を 1番目に並び替え
+        $this->post('/api/todos/reorder', json_encode(['ids' => [$todo2->id, 1]]));
+
+        $this->assertResponseOk();
+        $this->assertSame(['success' => true], $this->json());
+
+        $Todos = $this->getTableLocator()->get('Todos');
+        $this->assertSame(0, (int)$Todos->get($todo2->id)->position);
+        $this->assertSame(1, (int)$Todos->get(1)->position);
+    }
+
+    /**
+     * 他人の Todo ID を含む並び替えは、その ID だけスキップされ、自分のものは更新される
+     *
+     * @return void
+     */
+    public function testReorderIgnoresOtherUsersTodos(): void
+    {
+        $this->loginAs(1);
+        // id=2 は bob の Todo → スキップされ、id=1 の position だけ更新される
+        $this->post('/api/todos/reorder', json_encode(['ids' => [2, 1]]));
+
+        $this->assertResponseOk();
+        $Todos = $this->getTableLocator()->get('Todos');
+        $this->assertSame(1, (int)$Todos->get(1)->position); // インデックス 1
+        $this->assertSame(2, (int)$Todos->get(2)->position); // 変更されない (フィクスチャー値)
+    }
+
+    /**
+     * ids が空配列の場合は 422
+     *
+     * @return void
+     */
+    public function testReorderEmptyIdsIsUnprocessable(): void
+    {
+        $this->loginAs(1);
+        $this->post('/api/todos/reorder', json_encode(['ids' => []]));
+
+        $this->assertResponseCode(422);
+    }
+
+    /**
+     * position ソートで Todo が position 昇順に返る
+     *
+     * @return void
+     */
+    public function testIndexSortByPosition(): void
+    {
+        $Todos = $this->getTableLocator()->get('Todos');
+        $second = $Todos->newEntity(['title' => 'B', 'completed' => false, 'position' => 0]);
+        $second->user_id = 1;
+        $Todos->save($second);
+        $Todos->updateAll(['position' => 99], ['id' => 1]);
+
+        $this->loginAs(1);
+        $this->get('/api/todos?sort=position&direction=asc');
+
+        $this->assertResponseOk();
+        $ids = array_column($this->json()['todos'], 'position');
+        $sorted = $ids;
+        sort($sorted);
+        $this->assertSame($sorted, $ids);
+    }
 }
