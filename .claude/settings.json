@@ -1,5 +1,26 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); echo \"$input\" | python3 -c \"\nimport sys, json\ndata = json.load(sys.stdin)\ncmd = data.get('tool_input', {}).get('command', '')\nif '--force' in cmd or '-f' in cmd.split() and 'push' in cmd:\n    print('force push はブロックされています。通常の git push を使ってください。', file=sys.stderr)\n    sys.exit(2)\n\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/moritanhayato/works/todo_app && echo '=== git status ===' && git status --short"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
