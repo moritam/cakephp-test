@@ -3,3 +3,5 @@ dist/
 logs/
 .env
 .DS_Store
+tmp/todo_app.sqlite
+tmp/tests.sqlite

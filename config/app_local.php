@@ -39,20 +39,15 @@ return [
      */
     'Datasources' => [
         'default' => [
-        'className' => \Cake\Database\Connection::class,
-        'driver' => \Cake\Database\Driver\Mysql::class,
-        'host' => 'localhost',
-        'port' => 8889,
-        'unix_socket' => '/Applications/MAMP/tmp/mysql/mysql.sock',
-        'username' => 'root',
-        'password' => 'root',
-        'database' => 'todo_app',
-        'encoding' => 'utf8mb4',
-        'timezone' => 'UTC',
-        'flags' => [],
-        'cacheMetadata' => true,
-        'log' => false,
-    ],
+            'className' => \Cake\Database\Connection::class,
+            'driver' => \Cake\Database\Driver\Sqlite::class,
+            'database' => TMP . 'todo_app.sqlite',
+            'encoding' => 'utf8',
+            'timezone' => 'UTC',
+            'flags' => [],
+            'cacheMetadata' => true,
+            'log' => false,
+        ],
 
         /*
          * The test connection is used during the test suite.
