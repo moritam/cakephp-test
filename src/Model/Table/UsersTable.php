@@ -18,6 +18,7 @@ use Cake\Validation\Validator;
  * @method array<\App\Model\Entity\User> patchEntities(iterable $entities, array $data, array $options = [])
  * @method \App\Model\Entity\User|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
  * @method \App\Model\Entity\User saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
+ * @property \App\Model\Table\TodosTable&\Cake\ORM\Association\HasMany $Todos
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
 class UsersTable extends Table
@@ -37,6 +38,12 @@ class UsersTable extends Table
         $this->setPrimaryKey('id');
 
         $this->addBehavior('Timestamp');
+
+        // ユーザー削除時は、そのユーザーの Todo も削除する
+        $this->hasMany('Todos', [
+            'foreignKey' => 'user_id',
+            'dependent' => true,
+        ]);
     }
 
     /**

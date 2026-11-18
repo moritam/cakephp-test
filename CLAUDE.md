@@ -80,7 +80,7 @@ config/
 ├── routes.php                   # ルーティング定義
 ├── app.php / app_local.php      # アプリ設定 / 環境ごとの設定 (DB 接続は app_local.php で SQLite を指定)
 ├── plugins.php                  # 読み込むプラグイン
-└── Migrations/                  # DB マイグレーション (CreateTodos, CreateUsers)
+└── Migrations/                  # DB マイグレーション (CreateTodos, CreateUsers, AddUserIdToTodos)
 
 templates/
 ├── layout/spa.php               # Vue SPA を読み込むレイアウト (/app/assets/index.js)
@@ -151,11 +151,12 @@ frontend/vite.config.js          # base: /app/、ビルド出力先、開発用�
 - PHP: PSR-12 準拠 (phpcs.xml で設定済み)
 - フロントエンド: Vue 3 Composition API を使用
 - API レスポンスは JSON 形式
+- Todo はユーザーごとに分離する。`Api\TodosController` では `find('ownedBy', userId: ...)` でログインユーザーの Todo に絞り込み、他ユーザーの Todo は 404 を返す。`user_id` はリクエストから受け取らず、コントローラーで設定する
 
 ## 既知の注意点
 
 - `GET /api/todos` のレスポンスの `pagination.count` が常に 0 になる (`paging` リクエスト属性を参照しているため)。
 - `PagesControllerTest` の 4 件が失敗する (認証の導入で `/pages/*` が 302 リダイレクトになったが、テストが未更新)。
-- `users` と `todos` は関連付いていない (`todos.user_id` なし)。ログインしたユーザーは全員、すべての Todo を参照・編集できる。
+- 新しいマイグレーションを追加した後に PHPUnit がブートストラップで失敗する場合は、`tmp/tests.sqlite` を削除して再実行する (cakephp/migrations 5.0.1 の Migrator は、テーブルを削除しても `cake_migrations` の適用履歴を消さないため)。
 - 旧サーバーサイド画面 (`src/Controller/TodosController.php`、`templates/Todos/` など) が残っている。`fallbacks()` があるため `/todos` などでもアクセスできる。
 - `UsersController::dbTest` はデバッグ用のアクションで、認証なしでアクセスできる。

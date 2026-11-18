@@ -24,6 +24,7 @@ class TodosTableTest extends TestCase
      * @var array<string>
      */
     protected array $fixtures = [
+        'app.Users',
         'app.Todos',
     ];
 

@@ -4,10 +4,14 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Controller\AppController;
+use App\Model\Entity\Todo;
 use Cake\Http\Response;
 
 /**
  * API Todos Controller (JSON)
+ *
+ * すべての操作はログイン中のユーザーが所有する Todo に限定する。
+ * 他ユーザーの Todo を指定された場合は、存在を明かさないよう 404 を返す。
  *
  * @property \App\Model\Table\TodosTable $Todos
  */
@@ -32,7 +36,8 @@ class TodosController extends AppController
     public function index(): Response
     {
         $this->request->allowMethod(['get']);
-        $query = $this->Todos->find()->orderByDesc('modified');
+        $query = $this->Todos->find('ownedBy', userId: $this->currentUserId())
+            ->orderByDesc('modified');
         $todos = $this->paginate($query, ['limit' => 100]);
         $pagination = $todos->pagingParams();
 
@@ -57,7 +62,7 @@ class TodosController extends AppController
     public function view(?string $id = null): Response
     {
         $this->request->allowMethod(['get']);
-        $todo = $this->Todos->get($id, contain: []);
+        $todo = $this->getOwnedTodo($id);
 
         return $this->response
             ->withType('application/json')
@@ -74,6 +79,7 @@ class TodosController extends AppController
         $this->request->allowMethod(['post']);
         $todo = $this->Todos->newEmptyEntity();
         $todo = $this->Todos->patchEntity($todo, $this->request->getData());
+        $todo->user_id = $this->currentUserId();
         if ($this->Todos->save($todo)) {
             return $this->response
                 ->withStatus(201)
@@ -98,7 +104,7 @@ class TodosController extends AppController
     public function edit(?string $id = null): Response
     {
         $this->request->allowMethod(['put', 'patch']);
-        $todo = $this->Todos->get($id, contain: []);
+        $todo = $this->getOwnedTodo($id);
         $todo = $this->Todos->patchEntity($todo, $this->request->getData());
         if ($this->Todos->save($todo)) {
             return $this->response
@@ -123,9 +129,34 @@ class TodosController extends AppController
     public function delete(?string $id = null): Response
     {
         $this->request->allowMethod(['delete', 'post']);
-        $todo = $this->Todos->get($id);
+        $todo = $this->getOwnedTodo($id);
         $this->Todos->delete($todo);
 
         return $this->response->withStatus(204);
+    }
+
+    /**
+     * ログイン中のユーザー ID
+     *
+     * @return int
+     */
+    private function currentUserId(): int
+    {
+        return (int)$this->Authentication->getIdentity()->getIdentifier();
+    }
+
+    /**
+     * ログイン中のユーザーが所有する Todo を取得する (なければ 404)
+     *
+     * @param string|null $id Todo id.
+     * @return \App\Model\Entity\Todo
+     * @throws \Cake\Datasource\Exception\RecordNotFoundException
+     */
+    private function getOwnedTodo(?string $id): Todo
+    {
+        /** @var \App\Model\Entity\Todo */
+        return $this->Todos->find('ownedBy', userId: $this->currentUserId())
+            ->where(['Todos.id' => (int)$id])
+            ->firstOrFail();
     }
 }

@@ -20,10 +20,19 @@ class TodosFixture extends TestFixture
         $this->records = [
             [
                 'id' => 1,
+                'user_id' => 1,
                 'title' => 'Lorem ipsum dolor sit amet',
                 'completed' => 1,
                 'created' => '2026-02-23 23:14:22',
                 'modified' => '2026-02-23 23:14:22',
+            ],
+            [
+                'id' => 2,
+                'user_id' => 2,
+                'title' => 'Bob の Todo',
+                'completed' => 0,
+                'created' => '2026-02-23 23:15:00',
+                'modified' => '2026-02-23 23:15:00',
             ],
         ];
         parent::init();

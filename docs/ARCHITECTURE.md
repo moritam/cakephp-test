@@ -218,14 +218,19 @@ erDiagram
 
     todos {
         int id PK
+        int user_id FK "オーナー"
         string title "必須・255 文字以内"
         boolean completed "既定値 false"
         datetime created
         datetime modified
     }
+
+    users ||--o{ todos : "所有する"
 ```
 
-> users と todos は関連付いていません（`todos.user_id` がない）。ログインしたユーザーは全員、すべての Todo を参照・編集できます。
+- Todo は必ず 1 人のユーザーが所有します（`todos.user_id` は NOT NULL、外部キー制約付き）。
+- ユーザーを削除すると、そのユーザーの Todo も削除されます（`ON DELETE CASCADE`、`UsersTable` の `dependent`）。
+- API はログイン中のユーザーが所有する Todo だけを扱います。他人の Todo の ID を指定した場合は、存在を明かさないように 404 を返します。
 
 ---
 
@@ -237,7 +242,7 @@ flowchart TD
     Auth -->|No| R401["401 Unauthorized"]
     Auth -->|Yes| Route{"メソッドとパス"}
 
-    Route -->|"GET /api/todos"| Index["index<br/>更新日時の降順、最大 100 件"]
+    Route -->|"GET /api/todos"| Index["index<br/>自分の Todo のみ・更新日時の降順、最大 100 件"]
     Route -->|"GET /api/todos/{id}"| View["view"]
     Route -->|"POST /api/todos"| Add["add"]
     Route -->|"PUT・PATCH /api/todos/{id}"| Edit["edit"]
@@ -247,7 +252,7 @@ flowchart TD
     View --> Found{"存在する?"}
     Edit --> Found
     Delete --> Found
-    Found -->|No| R404["404"]
+    Found -->|"No（他人の Todo も含む）"| R404["404"]
     Found -->|"Yes: view"| R200["200 todo"]
     Found -->|"Yes: edit"| Valid{"バリデーション OK?"}
     Found -->|"Yes: delete"| R204["204 No Content"]
@@ -296,7 +301,7 @@ todo_app/
 ├── config/
 │   ├── routes.php            # サーバー側ルーティング
 │   ├── app.php, app_local.php# 設定 (DB は app_local.php で SQLite を指定)
-│   └── Migrations/           # CreateTodos, CreateUsers
+│   └── Migrations/           # CreateTodos, CreateUsers, AddUserIdToTodos
 ├── templates/
 │   ├── layout/spa.php        # SPA のレイアウト
 │   └── Todos/, Users/ ...    # 旧サーバーサイド画面
@@ -331,6 +336,6 @@ todo_app/
 - `UsersController::dbTest` - DB 接続テスト（デバッグ用）
 
 ### 認証必須のアクション
-- `Api\TodosController` の全アクション（未認証時は 401 JSON）
+- `Api\TodosController` の全アクション（未認証時は 401 JSON。ログイン中のユーザーが所有する Todo のみ操作可能）
 - `UsersController::logout` - ログアウト
 - 旧 `TodosController`、`PagesController` の全アクション（未認証時はログイン画面へリダイレクト）

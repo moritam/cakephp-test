@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use Cake\ORM\Query\SelectQuery;
+use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 
@@ -22,6 +24,7 @@ use Cake\Validation\Validator;
  * @method iterable<\App\Model\Entity\Todo>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Todo> saveManyOrFail(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\Todo>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Todo>|false deleteMany(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\Todo>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Todo> deleteManyOrFail(iterable $entities, array $options = [])
+ * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $Users
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
 class TodosTable extends Table
@@ -41,6 +44,39 @@ class TodosTable extends Table
         $this->setPrimaryKey('id');
 
         $this->addBehavior('Timestamp');
+
+        $this->belongsTo('Users', [
+            'foreignKey' => 'user_id',
+            'joinType' => 'INNER',
+        ]);
+    }
+
+    /**
+     * 指定ユーザーが所有する Todo だけに絞り込む
+     *
+     * 使い方: $this->Todos->find('ownedBy', userId: $userId)
+     *
+     * @param \Cake\ORM\Query\SelectQuery $query The query.
+     * @param int $userId オーナーのユーザー ID
+     * @return \Cake\ORM\Query\SelectQuery
+     */
+    public function findOwnedBy(SelectQuery $query, int $userId): SelectQuery
+    {
+        return $query->where([$this->aliasField('user_id') => $userId]);
+    }
+
+    /**
+     * Returns a rules checker object that will be used for validating
+     * application integrity.
+     *
+     * @param \Cake\ORM\RulesChecker $rules The rules object to be modified.
+     * @return \Cake\ORM\RulesChecker
+     */
+    public function buildRules(RulesChecker $rules): RulesChecker
+    {
+        $rules->add($rules->existsIn(['user_id'], 'Users'), ['errorField' => 'user_id']);
+
+        return $rules;
     }
 
     /**
