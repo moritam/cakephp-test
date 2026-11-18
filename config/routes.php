@@ -71,12 +71,11 @@ return function (RouteBuilder $routes): void {
         $builder->connect('/app', ['controller' => 'Spa', 'action' => 'index']);
         $builder->connect('/app/*', ['controller' => 'Spa', 'action' => 'index']);
 
-        // 認証・ユーザー登録（JSON 対応）
+        // 認証・ユーザー登録 (JSON API)
         $builder->connect('/users/login', ['controller' => 'Users', 'action' => 'login']);
         $builder->connect('/users/logout', ['controller' => 'Users', 'action' => 'logout']);
         $builder->connect('/users/add', ['controller' => 'Users', 'action' => 'add']);
 
-        $builder->connect('/pages/*', 'Pages::display');
-        $builder->fallbacks();
+        // fallbacks() は使わない: 定義したルート以外のコントローラー・アクションは公開しない
     });
 };

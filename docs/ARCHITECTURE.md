@@ -93,33 +93,28 @@ flowchart LR
         SC["SpaController"]
         UC["UsersController"]
         ATC["Api\\TodosController"]
-        TC["TodosController<br/>旧画面・SPA では未使用"]
-        PC["PagesController"]
     end
 
     subgraph Models["📊 Model"]
         TT["TodosTable"] --> TE["Todo Entity"]
         UT["UsersTable"] --> UE["User Entity<br/>パスワードを自動ハッシュ化"]
+        UT -- "hasMany" --> TT
     end
 
     subgraph Views["🎨 出力"]
         JSON["JSON レスポンス"]
         SpaL["layout/spa.php<br/>Vue のマウント先"]
-        Legacy["templates/Todos, Users など<br/>旧画面用"]
     end
 
-    AC --> SC & UC & ATC & TC & PC
+    AC --> SC & UC & ATC
     ATC --> TT
-    TC --> TT
     UC --> UT
     ATC --> JSON
     UC --> JSON
     SC --> SpaL
-    TC --> Legacy
-    UC -. "JSON 以外のリクエスト時" .-> Legacy
 ```
 
-`UsersController` は `Accept: application/json` のリクエストには JSON を、それ以外には HTML（旧画面）を返します。
+画面はすべて Vue SPA が描画します。サーバー側は SPA の土台となる HTML（`layout/spa.php`）と JSON だけを返します。`UsersController` をブラウザで直接開いた（GET した）場合は、SPA の画面（`/app/login`、`/app/register`）へリダイレクトします。
 
 ---
 
@@ -143,12 +138,12 @@ flowchart LR
         R2["/users/login"] --> UL["Users::login"]
         R3["/users/logout"] --> UO["Users::logout"]
         R4["/users/add"] --> UA["Users::add"]
-        R5["/pages/*"] --> PD["Pages::display"]
-        R6["fallbacks<br/>/{controller}/{action}"] --> FB["旧 Todos 画面など"]
     end
 
     ATI & ATV & ATA & ATE & ATD --> ATC["Api\\TodosController"]
 ```
+
+ここに定義したルート以外は 404 になります（`fallbacks()` は使っていません）。
 
 ### クライアント側（`frontend/src/router/index.js`、ベース `/app/`）
 
@@ -285,7 +280,7 @@ flowchart TD
 スタイルは Tailwind CSS 4 を使用しています。
 
 - Vue 側: `frontend/src/style.css` を `@tailwindcss/vite` でビルド
-- PHP テンプレート側（旧画面・SPA レイアウト）: `css/input.css` を Tailwind CLI でビルドし、`webroot/css/tailwind.css` に出力（ルートの `npm run build`）
+- PHP テンプレート側（SPA レイアウト）: `css/input.css` を Tailwind CLI でビルドし、`webroot/css/tailwind.css` に出力（ルートの `npm run build`）
 
 ---
 
@@ -295,7 +290,7 @@ flowchart TD
 todo_app/
 ├── src/                      # バックエンド (CakePHP)
 │   ├── Application.php       # ミドルウェア・認証の設定
-│   ├── Controller/           # Spa / Users / Api\Todos / 旧 Todos / Pages / Error
+│   ├── Controller/           # Spa / Users / Api\Todos / Error
 │   ├── Middleware/           # ApiUnauthorized / HostHeader
 │   └── Model/                # Table (検証ルール) と Entity
 ├── config/
@@ -304,7 +299,7 @@ todo_app/
 │   └── Migrations/           # CreateTodos, CreateUsers, AddUserIdToTodos
 ├── templates/
 │   ├── layout/spa.php        # SPA のレイアウト
-│   └── Todos/, Users/ ...    # 旧サーバーサイド画面
+│   └── Error/                # エラー画面
 ├── frontend/                 # フロントエンド (Vue 3 + Vite)
 │   ├── src/                  # main.js, App.vue, api.js, router/, layouts/, views/
 │   └── vite.config.js        # base: /app/、ビルド出力先、開発用プロキシ
@@ -333,9 +328,7 @@ todo_app/
 - `SpaController::index` / `redirectToApp` - SPA の配信、`/` から `/app` へのリダイレクト
 - `UsersController::login` - ログイン
 - `UsersController::add` - ユーザー登録
-- `UsersController::dbTest` - DB 接続テスト（デバッグ用）
+- `UsersController::logout` - ログアウト（未ログインでも成功扱い）
 
 ### 認証必須のアクション
 - `Api\TodosController` の全アクション（未認証時は 401 JSON。ログイン中のユーザーが所有する Todo のみ操作可能）
-- `UsersController::logout` - ログアウト
-- 旧 `TodosController`、`PagesController` の全アクション（未認証時はログイン画面へリダイレクト）

@@ -5,10 +5,12 @@ namespace App\Controller;
 
 use Cake\Event\EventInterface;
 use Cake\Http\Response;
-use Throwable;
 
 /**
- * Users Controller
+ * Users Controller (JSON)
+ *
+ * Vue SPA から呼ばれるログイン・ログアウト・ユーザー登録の API。
+ * 画面は SPA 側にあるため、ブラウザで直接開かれた場合は SPA の画面へリダイレクトする。
  *
  * @property \App\Model\Table\UsersTable $Users
  * @property \Authentication\Controller\Component\AuthenticationComponent $Authentication
@@ -16,122 +18,92 @@ use Throwable;
 class UsersController extends AppController
 {
     /**
-     * 認証不要のアクション
+     * 認証不要のアクション (ログアウトは未ログインでも成功扱いにする)
+     *
+     * @param \Cake\Event\EventInterface $event The event.
+     * @return void
      */
     public function beforeFilter(EventInterface $event): void
     {
         parent::beforeFilter($event);
-        $this->Authentication->allowUnauthenticated(['login', 'add', 'dbTest']);
+        $this->Authentication->allowUnauthenticated(['login', 'logout', 'add']);
     }
 
     /**
-     * DB接続テスト用（動作確認後に削除してOK）
+     * ログイン (POST)
+     *
+     * 認証自体は Authentication ミドルウェアの Form 認証が行い、ここでは結果を返す。
      *
      * @return \Cake\Http\Response
      */
-    public function dbTest(): Response
+    public function login(): Response
     {
-        try {
-            $this->Users->find()->first();
-            $this->Flash->success('DB接続成功');
-        } catch (Throwable $e) {
-            $this->Flash->error('DB接続エラー: ' . $e->getMessage());
+        if (!$this->request->is('post')) {
+            return $this->redirect('/app/login');
         }
 
-        return $this->redirect(['action' => 'login']);
-    }
-
-    /**
-     * ログイン
-     *
-     * @return \Cake\Http\Response|null|void
-     */
-    public function login()
-    {
         $result = $this->Authentication->getResult();
-
         if ($result && $result->isValid()) {
-            if ($this->request->is('json') || $this->request->accepts('application/json')) {
-                return $this->response
-                    ->withType('application/json')
-                    ->withStringBody((string)json_encode(['success' => true], JSON_THROW_ON_ERROR));
-            }
-            $target = $this->Authentication->getLoginRedirect() ?? [
-                'controller' => 'Todos',
-                'action' => 'index',
-            ];
-
-            return $this->redirect($target);
+            return $this->json(['success' => true]);
         }
 
-        if ($this->request->is('post')) {
-            if ($this->request->is('json') || $this->request->accepts('application/json')) {
-                return $this->response
-                    ->withStatus(401)
-                    ->withType('application/json')
-                    ->withStringBody((string)json_encode([
-                        'success' => false,
-                        'message' => __('メールアドレスまたはパスワードが正しくありません。'),
-                    ], JSON_THROW_ON_ERROR));
-            }
-            $this->Flash->error(__('メールアドレスまたはパスワードが正しくありません。'));
-        }
+        return $this->json([
+            'success' => false,
+            'message' => __('メールアドレスまたはパスワードが正しくありません。'),
+        ], 401);
     }
 
     /**
      * ログアウト
      *
-     * @return \Cake\Http\Response|null
+     * @return \Cake\Http\Response
      */
-    public function logout()
+    public function logout(): Response
     {
         $this->Authentication->logout();
 
-        if ($this->request->is('json') || $this->request->accepts('application/json')) {
-            return $this->response
-                ->withType('application/json')
-                ->withStringBody((string)json_encode(['success' => true], JSON_THROW_ON_ERROR));
+        if (!$this->request->is('post')) {
+            return $this->redirect('/app/login');
         }
 
-        return $this->redirect(['controller' => 'Users', 'action' => 'login']);
+        return $this->json(['success' => true]);
     }
 
     /**
-     * ユーザー登録
+     * ユーザー登録 (POST)
      *
-     * @return \Cake\Http\Response|null|void
+     * @return \Cake\Http\Response
      */
-    public function add()
+    public function add(): Response
     {
-        $user = $this->Users->newEmptyEntity();
-
-        if ($this->request->is('post')) {
-            $user = $this->Users->patchEntity($user, $this->request->getData());
-
-            if ($this->Users->save($user)) {
-                if ($this->request->is('json') || $this->request->accepts('application/json')) {
-                    return $this->response
-                        ->withStatus(201)
-                        ->withType('application/json')
-                        ->withStringBody((string)json_encode(['success' => true], JSON_THROW_ON_ERROR));
-                }
-                $this->Flash->success(__('ユーザーを登録しました。ログインしてください。'));
-
-                return $this->redirect(['action' => 'login']);
-            }
-
-            if ($this->request->is('json') || $this->request->accepts('application/json')) {
-                return $this->response
-                    ->withStatus(422)
-                    ->withType('application/json')
-                    ->withStringBody((string)json_encode([
-                        'success' => false,
-                        'errors' => $user->getErrors(),
-                    ], JSON_THROW_ON_ERROR));
-            }
-            $this->Flash->error(__('ユーザーの登録に失敗しました。もう一度お試しください。'));
+        if (!$this->request->is('post')) {
+            return $this->redirect('/app/register');
         }
 
-        $this->set(compact('user'));
+        $user = $this->Users->newEmptyEntity();
+        $user = $this->Users->patchEntity($user, $this->request->getData());
+        if ($this->Users->save($user)) {
+            return $this->json(['success' => true], 201);
+        }
+
+        return $this->json([
+            'success' => false,
+            'errors' => $user->getErrors(),
+        ], 422);
+    }
+
+    /**
+     * JSON レスポンスを作る
+     *
+     * @param array<string, mixed> $data レスポンスボディ
+     * @param int $status HTTP ステータス
+     * @return \Cake\Http\Response
+     */
+    private function json(array $data, int $status = 200): Response
+    {
+        return $this->response
+            ->withStatus($status)
+            ->withType('application/json')
+            ->withStringBody((string)json_encode($data, JSON_THROW_ON_ERROR));
     }
 }

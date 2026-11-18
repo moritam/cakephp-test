@@ -126,12 +126,8 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
         $service = new AuthenticationService();
 
         $service->setConfig([
-            'unauthenticatedRedirect' => [
-                'prefix' => false,
-                'plugin' => null,
-                'controller' => 'Users',
-                'action' => 'login',
-            ],
+            // 画面は Vue SPA 側にあるため、SPA のログイン画面へリダイレクトする
+            'unauthenticatedRedirect' => '/app/login',
             'queryParam' => 'redirect',
         ]);
 

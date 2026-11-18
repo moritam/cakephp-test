@@ -63,9 +63,7 @@ src/
 ├── Controller/
 │   ├── AppController.php        # 基底コントローラー (Flash, Authentication を読み込み)
 │   ├── SpaController.php        # Vue SPA シェルの配信 (/app, /app/*)、/ → /app リダイレクト
-│   ├── UsersController.php      # ログイン・ログアウト・ユーザー登録 (JSON / HTML 両対応)
-│   ├── TodosController.php      # 旧サーバーサイドレンダリング版 Todo 画面 (SPA では未使用)
-│   ├── PagesController.php      # CakePHP 標準 (静的ページ)
+│   ├── UsersController.php      # ログイン・ログアウト・ユーザー登録 (JSON API)
 │   ├── ErrorController.php      # CakePHP 標準 (エラー画面)
 │   └── Api/
 │       └── TodosController.php  # Todo REST API (JSON)
@@ -85,13 +83,13 @@ config/
 templates/
 ├── layout/spa.php               # Vue SPA を読み込むレイアウト (/app/assets/index.js)
 ├── Spa/index.php                # SPA エントリーテンプレート (空)
-└── Todos/, Users/, layout/default.php, element/flash/  # 旧サーバーサイド画面用
+└── Error/, layout/error.php     # エラー画面
 
 webroot/
 └── app/                         # frontend のビルド成果物 (直接編集しない)
 
 tests/
-├── Fixture/TodosFixture.php
+├── Fixture/                     # TodosFixture.php, UsersFixture.php
 └── TestCase/                    # PHPUnit テスト
 ```
 
@@ -130,7 +128,8 @@ frontend/vite.config.js          # base: /app/、ビルド出力先、開発用�
 | PUT / PATCH | `/api/todos/:id` | Todo 更新 |
 | DELETE | `/api/todos/:id` | Todo 削除 (204) |
 
-- ユーザー系は `/api` プレフィックスなしで `UsersController` が処理する。`Accept: application/json` のときは JSON、それ以外は HTML を返す。
+- ユーザー系は `/api` プレフィックスなしで `UsersController` が処理し、常に JSON を返す。ブラウザで直接 GET した場合は SPA の画面 (`/app/login`、`/app/register`) へリダイレクトする。
+- ルートは `config/routes.php` に明示したものだけを公開する (`fallbacks()` は使わない)。
 - `/api/*` はログインが必要。未認証のときは 401 `{"error":"Unauthorized"}` を返す。
 - バリデーションエラーのときは 422 `{"errors": {...}}` を返す。
 - JSON リクエストでは `/api/*` と `/users/{login,logout,add}` の CSRF チェックを行わない (`Application::middleware()`)。
@@ -155,8 +154,5 @@ frontend/vite.config.js          # base: /app/、ビルド出力先、開発用�
 
 ## 既知の注意点
 
-- `GET /api/todos` のレスポンスの `pagination.count` が常に 0 になる (`paging` リクエスト属性を参照しているため)。
-- `PagesControllerTest` の 4 件が失敗する (認証の導入で `/pages/*` が 302 リダイレクトになったが、テストが未更新)。
 - 新しいマイグレーションを追加した後に PHPUnit がブートストラップで失敗する場合は、`tmp/tests.sqlite` を削除して再実行する (cakephp/migrations 5.0.1 の Migrator は、テーブルを削除しても `cake_migrations` の適用履歴を消さないため)。
-- 旧サーバーサイド画面 (`src/Controller/TodosController.php`、`templates/Todos/` など) が残っている。`fallbacks()` があるため `/todos` などでもアクセスできる。
-- `UsersController::dbTest` はデバッグ用のアクションで、認証なしでアクセスできる。
+- `templates/layout/default.php`、`templates/element/flash/`、`webroot/css/` の CakePHP 標準 CSS は、旧画面の削除後は使われていない。
