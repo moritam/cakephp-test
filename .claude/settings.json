@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/moritanhayato/works/todo_app && php_files=$(git diff --name-only HEAD 2>/dev/null | grep '\\.php$'); if [ -n \"$php_files\" ]; then composer cs-fix --quiet 2>/dev/null; fi; true"
+          }
+        ]
+      }
+    ]
+  }
+}
