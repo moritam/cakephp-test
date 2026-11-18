@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use Authentication\PasswordHasher\DefaultPasswordHasher;
+use Cake\Core\Configure;
 use Cake\Event\EventInterface;
 use Cake\Http\Response;
 
@@ -93,6 +95,12 @@ class UsersController extends AppController
         if (!$this->request->is('post')) {
             return $this->redirect('/app/register');
         }
+        if (!Configure::read('App.registrationEnabled')) {
+            return $this->json([
+                'success' => false,
+                'message' => __('新規登録は現在受け付けていません。'),
+            ], 403);
+        }
 
         $user = $this->Users->newEmptyEntity();
         $user = $this->Users->patchEntity($user, $this->request->getData());
@@ -104,6 +112,47 @@ class UsersController extends AppController
             'success' => false,
             'errors' => $user->getErrors(),
         ], 422);
+    }
+
+    /**
+     * パスワード変更 (PATCH)
+     *
+     * @return \Cake\Http\Response
+     */
+    public function changePassword(): Response
+    {
+        $this->request->allowMethod(['patch', 'post']);
+
+        $identity = $this->Authentication->getIdentity();
+        if ($identity === null) {
+            return $this->json(['errors' => ['auth' => '認証が必要です']], 401);
+        }
+
+        $currentPassword = (string)($this->request->getData('current_password') ?? '');
+        $newPassword = (string)($this->request->getData('new_password') ?? '');
+        $newPasswordConfirm = (string)($this->request->getData('new_password_confirm') ?? '');
+
+        if ($newPassword !== $newPasswordConfirm) {
+            return $this->json(['errors' => ['new_password_confirm' => '新しいパスワードと確認が一致しません']], 422);
+        }
+        if (strlen($newPassword) < 8) {
+            return $this->json(['errors' => ['new_password' => 'パスワードは8文字以上で入力してください']], 422);
+        }
+
+        $userId = (int)$identity->getIdentifier();
+        $user = $this->Users->get($userId);
+
+        $hasher = new DefaultPasswordHasher();
+        if (!$hasher->check($currentPassword, $user->password)) {
+            return $this->json(['errors' => ['current_password' => '現在のパスワードが正しくありません']], 422);
+        }
+
+        $user = $this->Users->patchEntity($user, ['password' => $newPassword]);
+        if ($this->Users->save($user)) {
+            return $this->json(['success' => true]);
+        }
+
+        return $this->json(['errors' => $user->getErrors()], 422);
     }
 
     /**

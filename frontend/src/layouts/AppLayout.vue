@@ -62,6 +62,12 @@ onMounted(async () => {
             >
               タグ管理
             </router-link>
+            <router-link
+              to="/account"
+              class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium"
+            >
+              アカウント
+            </router-link>
             <!-- ダークモード切り替え -->
             <button
               type="button"

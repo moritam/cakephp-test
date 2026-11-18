@@ -1,6 +1,7 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { VueDraggable } from 'vue-draggable-plus'
 import { api } from '../api'
 
 const router = useRouter()
@@ -9,6 +10,8 @@ const pagination = ref({ page: 1, pageCount: 1, count: 0 })
 const loading = ref(true)
 const error = ref('')
 const availableTags = ref([])
+const currentPage = ref(1)
+const PER_PAGE = 20
 
 const filters = ref({
   q: '',
@@ -19,15 +22,21 @@ const filters = ref({
   direction: 'desc',
 })
 
+const isManualSort = computed(() => filters.value.sort === 'position')
+const hasActiveFilters = computed(() =>
+  filters.value.q || filters.value.priority || filters.value.completed || filters.value.tag_id,
+)
+
 let searchTimer = null
 
 async function loadTodos() {
   loading.value = true
   error.value = ''
   try {
-    const data = await api.getTodos(filters.value)
+    const params = { ...filters.value, page: currentPage.value, per_page: PER_PAGE }
+    const data = await api.getTodos(params)
     todos.value = data.todos || []
-    pagination.value = data.pagination || {}
+    pagination.value = data.pagination || { page: 1, pageCount: 1, count: 0 }
   } catch (e) {
     error.value = e.message || '一覧の取得に失敗しました。'
   } finally {
@@ -41,11 +50,12 @@ onMounted(async () => {
   await loadTodos()
 })
 
-// q はデバウンス、他は即時
+// q はデバウンス、他は即時 (ページをリセット)
 watch(
   () => filters.value.q,
   () => {
     clearTimeout(searchTimer)
+    currentPage.value = 1
     searchTimer = setTimeout(loadTodos, 300)
   },
 )
@@ -57,7 +67,10 @@ watch(
     filters.value.sort,
     filters.value.direction,
   ],
-  loadTodos,
+  () => {
+    currentPage.value = 1
+    loadTodos()
+  },
 )
 
 function toggleSort(field) {
@@ -65,13 +78,52 @@ function toggleSort(field) {
     filters.value.direction = filters.value.direction === 'asc' ? 'desc' : 'asc'
   } else {
     filters.value.sort = field
-    filters.value.direction = 'desc'
+    filters.value.direction = field === 'position' ? 'asc' : 'desc'
   }
 }
 
 function sortIcon(field) {
   if (filters.value.sort !== field) return '↕'
   return filters.value.direction === 'asc' ? '↑' : '↓'
+}
+
+function prevPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--
+    loadTodos()
+  }
+}
+function nextPage() {
+  if (currentPage.value < pagination.value.pageCount) {
+    currentPage.value++
+    loadTodos()
+  }
+}
+
+async function onDragEnd() {
+  if (hasActiveFilters.value) return
+  try {
+    await api.reorderTodos(todos.value.map((t) => t.id))
+  } catch (e) {
+    error.value = e.message || '並び替えの保存に失敗しました。'
+  }
+}
+
+function exportCsv() {
+  const params = { ...filters.value }
+  delete params.sort
+  delete params.direction
+  const qs = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== '' && v !== null && v !== undefined && v !== false && v !== 0) {
+      qs.append(k, String(v))
+    }
+  })
+  const url = `/api/todos/export${qs.toString() ? '?' + qs.toString() : ''}`
+  const a = document.createElement('a')
+  a.href = url
+  a.download = ''
+  a.click()
 }
 
 const priorityLabel = { high: '高', medium: '中', low: '低' }
@@ -118,12 +170,22 @@ async function remove(id, title) {
   <div class="todos-index">
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Todos</h2>
-      <router-link :to="{ name: 'TodoAdd' }" class="btn-primary">New TODO</router-link>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="btn-secondary text-sm"
+          title="現在のフィルター条件でCSVをダウンロード"
+          @click="exportCsv"
+        >
+          ↓ CSV
+        </button>
+        <router-link :to="{ name: 'TodoAdd' }" class="btn-primary">New TODO</router-link>
+      </div>
     </div>
 
     <!-- 検索・フィルターパネル -->
     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <div class="lg:col-span-1">
           <input
             v-model="filters.q"
@@ -155,18 +217,34 @@ async function remove(id, title) {
             </option>
           </select>
         </div>
+        <div>
+          <select v-model="filters.sort" class="form-input">
+            <option value="modified">更新日順</option>
+            <option value="created">作成日順</option>
+            <option value="due_date">期限日順</option>
+            <option value="priority">優先度順</option>
+            <option value="position">手動順</option>
+          </select>
+        </div>
       </div>
     </div>
 
     <div v-if="error" class="rounded-lg bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800 p-4 mb-4">
       {{ error }}
     </div>
+
+    <!-- 手動順でフィルター中の注意 -->
+    <div v-if="isManualSort && hasActiveFilters" class="rounded-lg bg-yellow-50 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-800 p-3 mb-4 text-sm">
+      フィルターが有効なときはドラッグ＆ドロップによる並び替えは無効です。
+    </div>
+
     <div v-if="loading" class="text-slate-500 dark:text-slate-400">読み込み中...</div>
     <div v-else class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
           <thead class="bg-slate-50 dark:bg-slate-900">
             <tr>
+              <th v-if="isManualSort && !hasActiveFilters" class="px-2 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase w-8"></th>
               <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">
                 <button type="button" class="flex items-center gap-1 hover:text-slate-800 dark:hover:text-slate-200" @click="toggleSort('priority')">
                   優先度 <span>{{ sortIcon('priority') }}</span>
@@ -188,7 +266,15 @@ async function remove(id, title) {
               <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">操作</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+          <!-- 手動順かつフィルターなし → ドラッグ可能 -->
+          <VueDraggable
+            v-if="isManualSort && !hasActiveFilters"
+            v-model="todos"
+            tag="tbody"
+            handle=".drag-handle"
+            class="divide-y divide-slate-200 dark:divide-slate-700"
+            @end="onDragEnd"
+          >
             <tr
               v-for="todo in todos"
               :key="todo.id"
@@ -199,7 +285,9 @@ async function remove(id, title) {
                   : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700',
               ]"
             >
-              <!-- 優先度バッジ -->
+              <td class="px-2 py-3 w-8">
+                <span class="drag-handle cursor-grab text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 select-none text-lg">⠿</span>
+              </td>
               <td class="px-4 py-3 whitespace-nowrap">
                 <span
                   v-if="todo.priority"
@@ -207,72 +295,121 @@ async function remove(id, title) {
                     'inline-flex px-2 py-0.5 text-xs font-medium rounded-full',
                     priorityClass[todo.priority] ?? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200',
                   ]"
-                >
-                  {{ priorityLabel[todo.priority] ?? todo.priority }}
-                </span>
+                >{{ priorityLabel[todo.priority] ?? todo.priority }}</span>
                 <span v-else class="text-slate-400">—</span>
               </td>
-              <!-- タイトル -->
               <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100 max-w-xs truncate">{{ todo.title }}</td>
-              <!-- タグ -->
               <td class="px-4 py-3">
                 <div class="flex flex-wrap gap-1">
                   <span
-                    v-for="tag in todo.tags"
-                    :key="tag.id"
+                    v-for="tag in todo.tags" :key="tag.id"
                     class="inline-flex px-2 py-0.5 text-xs font-medium rounded-full text-white"
                     :style="{ backgroundColor: tag.color }"
-                  >
-                    {{ tag.name }}
-                  </span>
+                  >{{ tag.name }}</span>
                   <span v-if="!todo.tags?.length" class="text-slate-400 text-xs">—</span>
                 </div>
               </td>
-              <!-- 完了 -->
               <td class="px-4 py-3 whitespace-nowrap">
-                <span
-                  :class="[
-                    'inline-flex px-2 py-1 text-xs font-medium rounded-full',
-                    todo.completed ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200',
-                  ]"
-                >
+                <span :class="['inline-flex px-2 py-1 text-xs font-medium rounded-full', todo.completed ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200']">
                   {{ todo.completed ? 'Done' : 'Not done' }}
                 </span>
               </td>
-              <!-- 期限日 -->
-              <td
-                class="px-4 py-3 whitespace-nowrap text-sm"
-                :class="isOverdue(todo) ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-slate-500 dark:text-slate-400'"
-              >
-                {{ formatDueDate(todo.due_date) }}
-                <span v-if="isOverdue(todo)" class="text-xs ml-1">⚠</span>
+              <td class="px-4 py-3 whitespace-nowrap text-sm" :class="isOverdue(todo) ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-slate-500 dark:text-slate-400'">
+                {{ formatDueDate(todo.due_date) }}<span v-if="isOverdue(todo)" class="text-xs ml-1">⚠</span>
               </td>
-              <!-- 更新日時 -->
               <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{{ formatDate(todo.modified) }}</td>
-              <!-- 操作 -->
               <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium space-x-2">
                 <button type="button" class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300" @click="goView(todo.id)">View</button>
                 <button type="button" class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300" @click="goEdit(todo.id)">Edit</button>
-                <button
-                  type="button"
-                  class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                  @click="remove(todo.id, todo.title)"
-                >
-                  Delete
-                </button>
+                <button type="button" class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300" @click="remove(todo.id, todo.title)">Delete</button>
               </td>
             </tr>
             <tr v-if="todos.length === 0">
-              <td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
-                Todoが見つかりません。
+              <td colspan="8" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">Todoが見つかりません。</td>
+            </tr>
+          </VueDraggable>
+          <!-- 通常の tbody -->
+          <tbody v-else class="divide-y divide-slate-200 dark:divide-slate-700">
+            <tr
+              v-for="todo in todos"
+              :key="todo.id"
+              :class="[
+                'transition-colors',
+                isOverdue(todo)
+                  ? 'bg-red-50 dark:bg-red-950 hover:bg-red-100 dark:hover:bg-red-900'
+                  : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700',
+              ]"
+            >
+              <td class="px-4 py-3 whitespace-nowrap">
+                <span
+                  v-if="todo.priority"
+                  :class="[
+                    'inline-flex px-2 py-0.5 text-xs font-medium rounded-full',
+                    priorityClass[todo.priority] ?? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200',
+                  ]"
+                >{{ priorityLabel[todo.priority] ?? todo.priority }}</span>
+                <span v-else class="text-slate-400">—</span>
               </td>
+              <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100 max-w-xs truncate">{{ todo.title }}</td>
+              <td class="px-4 py-3">
+                <div class="flex flex-wrap gap-1">
+                  <span
+                    v-for="tag in todo.tags" :key="tag.id"
+                    class="inline-flex px-2 py-0.5 text-xs font-medium rounded-full text-white"
+                    :style="{ backgroundColor: tag.color }"
+                  >{{ tag.name }}</span>
+                  <span v-if="!todo.tags?.length" class="text-slate-400 text-xs">—</span>
+                </div>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <span :class="['inline-flex px-2 py-1 text-xs font-medium rounded-full', todo.completed ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200']">
+                  {{ todo.completed ? 'Done' : 'Not done' }}
+                </span>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm" :class="isOverdue(todo) ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-slate-500 dark:text-slate-400'">
+                {{ formatDueDate(todo.due_date) }}<span v-if="isOverdue(todo)" class="text-xs ml-1">⚠</span>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{{ formatDate(todo.modified) }}</td>
+              <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                <button type="button" class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300" @click="goView(todo.id)">View</button>
+                <button type="button" class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300" @click="goEdit(todo.id)">Edit</button>
+                <button type="button" class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300" @click="remove(todo.id, todo.title)">Delete</button>
+              </td>
+            </tr>
+            <tr v-if="todos.length === 0">
+              <td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">Todoが見つかりません。</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
-    <p v-if="!loading && pagination.count !== undefined" class="text-sm text-slate-600 dark:text-slate-400 mt-4">
-      {{ todos.length }} 件表示 / 全 {{ pagination.count }} 件
-    </p>
+
+    <!-- ページネーション -->
+    <div v-if="!loading" class="flex items-center justify-between mt-4">
+      <p class="text-sm text-slate-600 dark:text-slate-400">
+        {{ todos.length }} 件表示 / 全 {{ pagination.count }} 件
+      </p>
+      <div v-if="pagination.pageCount > 1" class="flex items-center gap-2">
+        <button
+          type="button"
+          class="btn-secondary text-sm px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+          :disabled="currentPage <= 1"
+          @click="prevPage"
+        >
+          ← 前
+        </button>
+        <span class="text-sm text-slate-600 dark:text-slate-400">
+          {{ currentPage }} / {{ pagination.pageCount }} ページ
+        </span>
+        <button
+          type="button"
+          class="btn-secondary text-sm px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+          :disabled="currentPage >= pagination.pageCount"
+          @click="nextPage"
+        >
+          次 →
+        </button>
+      </div>
+    </div>
   </div>
 </template>

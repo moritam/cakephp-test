@@ -14,6 +14,7 @@ use Cake\ORM\Entity;
  * @property string|null $description
  * @property bool|null $completed
  * @property string $priority
+ * @property int $position
  * @property \Cake\I18n\Date|null $due_date
  * @property \Cake\I18n\DateTime|null $created
  * @property \Cake\I18n\DateTime|null $modified
@@ -31,6 +32,7 @@ class Todo extends Entity
         'description' => true,
         'completed' => true,
         'priority' => true,
+        'position' => true,
         'due_date' => true,
         'created' => true,
         'modified' => true,

@@ -115,6 +115,22 @@ export const api = {
     const r = await request(`/api/tags/${id}`, { method: 'DELETE' })
     if (r.status !== 204 && !r.ok) throw new Error(await r.text())
   },
+
+  async changePassword(currentPassword, newPassword, newPasswordConfirm) {
+    const r = await request('/users/change-password', {
+      method: 'PATCH',
+      body: { current_password: currentPassword, new_password: newPassword, new_password_confirm: newPasswordConfirm },
+    })
+    const data = await r.json().catch(() => ({}))
+    if (!r.ok) throw Object.assign(new Error('パスワードの変更に失敗しました'), { errors: data.errors })
+    return data
+  },
+
+  async reorderTodos(ids) {
+    const r = await request('/api/todos/reorder', { method: 'POST', body: { ids } })
+    if (!r.ok) throw new Error(await r.text())
+    return r.json()
+  },
 }
 
 /** 認証チェック（API が 401 を返すか） */

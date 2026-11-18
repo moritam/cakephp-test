@@ -48,6 +48,11 @@ const routes = [
         name: 'TagList',
         component: () => import('../views/TagListView.vue'),
       },
+      {
+        path: 'account',
+        name: 'Account',
+        component: () => import('../views/AccountView.vue'),
+      },
     ],
   },
 ]

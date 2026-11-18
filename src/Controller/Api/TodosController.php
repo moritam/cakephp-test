@@ -53,10 +53,14 @@ class TodosController extends AppController
         $overdue = (bool)($this->request->getQuery('overdue') ?? false);
 
         $sortField = (string)($this->request->getQuery('sort') ?? 'modified');
-        $direction = strtolower((string)($this->request->getQuery('direction') ?? 'desc')) === 'asc' ? 'ASC' : 'DESC';
-        if (!in_array($sortField, ['modified', 'created', 'due_date', 'priority'], true)) {
+        $defaultDirection = $sortField === 'position' ? 'ASC' : 'DESC';
+        $rawDirection = strtolower((string)($this->request->getQuery('direction') ?? $defaultDirection));
+        $direction = $rawDirection === 'asc' ? 'ASC' : 'DESC';
+        if (!in_array($sortField, ['modified', 'created', 'due_date', 'priority', 'position'], true)) {
             $sortField = 'modified';
         }
+
+        $perPage = min(50, max(1, (int)($this->request->getQuery('per_page') ?? 20)));
 
         $query = $this->Todos
             ->find('ownedBy', userId: $this->currentUserId())
@@ -64,7 +68,7 @@ class TodosController extends AppController
             ->contain(['Tags'])
             ->orderBy(["Todos.{$sortField}" => $direction]);
 
-        $todos = $this->paginate($query, ['limit' => 100]);
+        $todos = $this->paginate($query, ['limit' => $perPage]);
         $pagination = $todos->pagingParams();
 
         return $this->response
@@ -148,6 +152,107 @@ class TodosController extends AppController
             ->withStringBody((string)json_encode([
                 'errors' => $todo->getErrors(),
             ], JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * CSV エクスポート (フィルター適用・全件・ページネーションなし)
+     *
+     * @return \Cake\Http\Response
+     */
+    public function export(): Response
+    {
+        $this->request->allowMethod(['get']);
+
+        $q = (string)($this->request->getQuery('q') ?? '');
+        $priority = (string)($this->request->getQuery('priority') ?? '');
+        $completed = (string)($this->request->getQuery('completed') ?? '');
+        $tagId = (int)($this->request->getQuery('tag_id') ?? 0);
+        $overdue = (bool)($this->request->getQuery('overdue') ?? false);
+
+        $todos = $this->Todos
+            ->find('ownedBy', userId: $this->currentUserId())
+            ->find('filtered', q: $q, priority: $priority, completed: $completed, tagId: $tagId, overdue: $overdue)
+            ->contain(['Tags'])
+            ->orderBy(['Todos.modified' => 'DESC'])
+            ->all();
+
+        $rows = [];
+        $rows[] = ['id', 'title', 'description', 'priority', 'completed', 'due_date', 'tags', 'created', 'modified'];
+        foreach ($todos as $todo) {
+            $tagNames = implode(',', array_map(fn($t) => $t->name, $todo->tags ?? []));
+            $rows[] = [
+                $todo->id,
+                $todo->title,
+                $todo->description ?? '',
+                $todo->priority,
+                $todo->completed ? '1' : '0',
+                $todo->due_date ? $todo->due_date->toDateString() : '',
+                $tagNames,
+                $todo->created ? $todo->created->toDateTimeString() : '',
+                $todo->modified ? $todo->modified->toDateTimeString() : '',
+            ];
+        }
+
+        $csv = "\xEF\xBB\xBF"; // BOM (Excel UTF-8 対応)
+        foreach ($rows as $row) {
+            $escaped = array_map(function (mixed $v): string {
+                $s = (string)$v;
+                if (str_contains($s, ',') || str_contains($s, '"') || str_contains($s, "\n")) {
+                    return '"' . str_replace('"', '""', $s) . '"';
+                }
+
+                return $s;
+            }, $row);
+            $csv .= implode(',', $escaped) . "\r\n";
+        }
+
+        $filename = 'todos_' . date('Ymd') . '.csv';
+
+        return $this->response
+            ->withType('text/csv')
+            ->withHeader('Content-Disposition', "attachment; filename=\"{$filename}\"")
+            ->withStringBody($csv);
+    }
+
+    /**
+     * Todo の表示順を更新する
+     *
+     * リクエスト: { ids: [3, 1, 5, ...] } — 新しい表示順の todo ID 配列
+     *
+     * @return \Cake\Http\Response
+     */
+    public function reorder(): Response
+    {
+        $this->request->allowMethod(['post']);
+        $ids = $this->request->getData('ids');
+        if (!is_array($ids) || count($ids) === 0) {
+            return $this->response
+                ->withStatus(422)
+                ->withType('application/json')
+                ->withStringBody((string)json_encode(
+                    ['errors' => ['ids' => 'ids は空でない配列を指定してください']],
+                    JSON_THROW_ON_ERROR,
+                ));
+        }
+
+        $userId = $this->currentUserId();
+        $ownedIds = $this->Todos->find('ownedBy', userId: $userId)
+            ->select(['Todos.id'])
+            ->where(['Todos.id IN' => $ids])
+            ->all()
+            ->map(fn($t) => $t->id)
+            ->toArray();
+
+        foreach ($ids as $position => $id) {
+            if (!in_array((int)$id, $ownedIds, true)) {
+                continue;
+            }
+            $this->Todos->updateAll(['position' => $position], ['id' => (int)$id]);
+        }
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody((string)json_encode(['success' => true], JSON_THROW_ON_ERROR));
     }
 
     /**

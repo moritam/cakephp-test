@@ -53,6 +53,9 @@ return function (RouteBuilder $routes): void {
     $routes->scope('/api', function (RouteBuilder $builder): void {
         $builder->setRouteClass(DashedRoute::class);
         $builder->get('/todos', ['controller' => 'Todos', 'action' => 'index', 'prefix' => 'Api']);
+        // 固定パスのルートは {id} より前に定義する
+        $builder->get('/todos/export', ['controller' => 'Todos', 'action' => 'export', 'prefix' => 'Api']);
+        $builder->post('/todos/reorder', ['controller' => 'Todos', 'action' => 'reorder', 'prefix' => 'Api']);
         $builder->get('/todos/{id}', ['controller' => 'Todos', 'action' => 'view', 'prefix' => 'Api'])
             ->setPass(['id']);
         $builder->post('/todos', ['controller' => 'Todos', 'action' => 'add', 'prefix' => 'Api']);
@@ -82,6 +85,7 @@ return function (RouteBuilder $routes): void {
         $builder->connect('/users/logout', ['controller' => 'Users', 'action' => 'logout']);
         $builder->connect('/users/add', ['controller' => 'Users', 'action' => 'add']);
         $builder->get('/users/csrf-token', ['controller' => 'Users', 'action' => 'csrfToken']);
+        $builder->patch('/users/change-password', ['controller' => 'Users', 'action' => 'changePassword']);
 
         // fallbacks() は使わない: 定義したルート以外のコントローラー・アクションは公開しない
     });
