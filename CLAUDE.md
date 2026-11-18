@@ -6,6 +6,15 @@
 
 CakePHP 5 (バックエンド) + Vue 3 (フロントエンド SPA) による Todo 管理アプリ。
 
+### 主な機能
+
+- ユーザー登録・ログイン (セッション認証、CSRF 保護)
+- Todo の CRUD (タイトル・説明・優先度・期限日)
+- タグ管理 (カラーピッカー付き) と Todo への多重タグ付け
+- 一覧の検索 (タイトルキーワード)・フィルター (優先度/完了状態/タグ)・ソート (更新日/期限日/優先度)
+- 期限切れ Todo の赤ハイライト表示
+- ダークモード切り替え (localStorage 永続化)
+
 ## 技術スタック
 
 | レイヤー | 技術 |
@@ -78,21 +87,22 @@ src/
 │   ├── UsersController.php      # ログイン・ログアウト・ユーザー登録 (JSON API)
 │   ├── ErrorController.php      # CakePHP 標準 (エラー画面)
 │   └── Api/
-│       └── TodosController.php  # Todo REST API (JSON)
+│       ├── TodosController.php  # Todo REST API (JSON)。検索・フィルター・ソート対応
+│       └── TagsController.php   # Tag REST API (JSON)
 ├── Middleware/
 │   ├── ApiUnauthorizedMiddleware.php  # /api への未認証アクセスに 401 JSON を返す
 │   ├── LoginThrottleMiddleware.php    # ログイン失敗回数の制限 (超過で 429)
 │   └── HostHeaderMiddleware.php       # 本番環境での Host ヘッダー検証
 └── Model/
-    ├── Entity/                  # Todo.php, User.php (パスワードは自動ハッシュ化・JSON 非公開)
-    └── Table/                   # TodosTable.php, UsersTable.php (バリデーション定義)
+    ├── Entity/                  # Todo.php, User.php, Tag.php
+    └── Table/                   # TodosTable.php (findOwnedBy/findFiltered), UsersTable.php, TagsTable.php
 
 config/
 ├── routes.php                   # ルーティング定義
 ├── app.php                      # アプリ共通設定
 ├── app_local.php                # 環境ごとの設定・秘密情報 (Git 管理外。app_local.example.php から生成)
 ├── plugins.php                  # 読み込むプラグイン
-└── Migrations/                  # DB マイグレーション (CreateTodos, CreateUsers, AddUserIdToTodos)
+└── Migrations/                  # DB マイグレーション (CreateTodos, CreateUsers, AddUserIdToTodos, AddFieldsToTodos, CreateTags, CreateTagsTodos)
 
 templates/
 ├── layout/spa.php               # Vue SPA を読み込むレイアウト (/app/assets/index.js)
@@ -122,9 +132,10 @@ frontend/src/
 └── views/
     ├── LoginView.vue
     ├── RegisterView.vue
-    ├── TodoListView.vue
+    ├── TodoListView.vue         # 検索・フィルター・ソート・優先度バッジ・期限切れハイライト
     ├── TodoDetailView.vue
-    └── TodoFormView.vue         # 追加・編集で共用 (route meta.mode で切替)
+    ├── TodoFormView.vue         # 追加・編集で共用 (route meta.mode で切替)。優先度/期限日/説明/タグ対応
+    └── TagListView.vue          # タグ管理 (作成・削除)
 
 frontend/vite.config.js          # base: /app/、ビルド出力先、開発用プロキシ
 ```
@@ -137,11 +148,14 @@ frontend/vite.config.js          # base: /app/、ビルド出力先、開発用�
 | POST | `/users/login` | ログイン |
 | POST | `/users/logout` | ログアウト |
 | GET | `/users/csrf-token` | CSRF トークン取得 |
-| GET | `/api/todos` | Todo 一覧取得 (更新日時の降順、最大 100 件) |
+| GET | `/api/todos` | Todo 一覧取得 (最大 100 件)。クエリパラメータ: `q`, `priority`, `completed`, `tag_id`, `overdue`, `sort`, `direction` |
 | POST | `/api/todos` | Todo 作成 |
-| GET | `/api/todos/:id` | Todo 取得 |
+| GET | `/api/todos/:id` | Todo 取得 (タグ含む) |
 | PUT / PATCH | `/api/todos/:id` | Todo 更新 |
 | DELETE | `/api/todos/:id` | Todo 削除 (204) |
+| GET | `/api/tags` | タグ一覧取得 |
+| POST | `/api/tags` | タグ作成 |
+| DELETE | `/api/tags/:id` | タグ削除 (204) |
 
 - ユーザー系は `/api` プレフィックスなしで `UsersController` が処理し、常に JSON を返す。ブラウザで直接 GET した場合は SPA の画面 (`/app/login`、`/app/register`) へリダイレクトする。
 - ルートは `config/routes.php` に明示したものだけを公開する (`fallbacks()` は使わない)。
@@ -159,6 +173,7 @@ frontend/vite.config.js          # base: /app/、ビルド出力先、開発用�
 | `/app/todos/new` | Todo 追加 |
 | `/app/todos/:id` | Todo 詳細 |
 | `/app/todos/:id/edit` | Todo 編集 |
+| `/app/tags` | タグ管理 |
 | `/app/login` | ログイン |
 | `/app/register` | ユーザー登録 |
 
@@ -168,6 +183,10 @@ frontend/vite.config.js          # base: /app/、ビルド出力先、開発用�
 - フロントエンド: Vue 3 Composition API を使用
 - API レスポンスは JSON 形式
 - Todo はユーザーごとに分離する。`Api\TodosController` では `find('ownedBy', userId: ...)` でログインユーザーの Todo に絞り込み、他ユーザーの Todo は 404 を返す。`user_id` はリクエストから受け取らず、コントローラーで設定する
+- タグはユーザー共通 (全ユーザーで同じタグプールを共有する設計)
+- Todo の `priority` は `'high'|'medium'|'low'` の文字列。デフォルトは `'medium'`
+- Tailwind CSS 4 のダークモードは `@custom-variant dark (&:where(.dark, .dark *))` で `class` 戦略を設定している。`html` 要素への `.dark` クラス付与は `AppLayout.vue` が行う
+- Todo と Tag は `BelongsToMany` で結合テーブル `tags_todos` を使う (CakePHP 規約: アルファベット順 tags < todos)
 
 ## 既知の注意点
 
