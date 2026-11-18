@@ -159,4 +159,3 @@ frontend/vite.config.js          # base: /app/、ビルド出力先、開発用�
 - `users` と `todos` は関連付いていない (`todos.user_id` なし)。ログインしたユーザーは全員、すべての Todo を参照・編集できる。
 - 旧サーバーサイド画面 (`src/Controller/TodosController.php`、`templates/Todos/` など) が残っている。`fallbacks()` があるため `/todos` などでもアクセスできる。
 - `UsersController::dbTest` はデバッグ用のアクションで、認証なしでアクセスできる。
-- `docs/ARCHITECTURE.md` は Vue SPA 化する前の構成のまま。
