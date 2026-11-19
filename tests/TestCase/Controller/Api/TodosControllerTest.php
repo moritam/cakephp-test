@@ -392,6 +392,81 @@ class TodosControllerTest extends TestCase
     }
 
     /**
+     * 一括完了で指定した自分の Todo が completed = true になる
+     *
+     * @return void
+     */
+    public function testBulkComplete(): void
+    {
+        $this->loginAs(1);
+        $this->post('/api/todos/bulk', json_encode(['action' => 'complete', 'ids' => [1]]));
+
+        $this->assertResponseOk();
+        $body = $this->json();
+        $this->assertSame(true, $body['success']);
+        $this->assertSame(1, $body['count']);
+        $this->assertTrue((bool)$this->getTableLocator()->get('Todos')->get(1)->completed);
+    }
+
+    /**
+     * 一括削除で指定した自分の Todo が削除される
+     *
+     * @return void
+     */
+    public function testBulkDelete(): void
+    {
+        $this->loginAs(1);
+        $this->post('/api/todos/bulk', json_encode(['action' => 'delete', 'ids' => [1]]));
+
+        $this->assertResponseOk();
+        $body = $this->json();
+        $this->assertSame(1, $body['count']);
+        $this->assertFalse($this->getTableLocator()->get('Todos')->exists(['id' => 1]));
+    }
+
+    /**
+     * 他人の Todo ID を含む一括操作は、その ID を無視して自分のものだけ処理する
+     *
+     * @return void
+     */
+    public function testBulkIgnoresOtherUsersTodos(): void
+    {
+        $this->loginAs(1);
+        // id=2 は bob の Todo → 無視され、count=0
+        $this->post('/api/todos/bulk', json_encode(['action' => 'delete', 'ids' => [2]]));
+
+        $this->assertResponseOk();
+        $this->assertSame(0, $this->json()['count']);
+        $this->assertTrue($this->getTableLocator()->get('Todos')->exists(['id' => 2]));
+    }
+
+    /**
+     * action が不正な場合は 422
+     *
+     * @return void
+     */
+    public function testBulkInvalidAction(): void
+    {
+        $this->loginAs(1);
+        $this->post('/api/todos/bulk', json_encode(['action' => 'invalid', 'ids' => [1]]));
+
+        $this->assertResponseCode(422);
+    }
+
+    /**
+     * ids が空の場合は 422
+     *
+     * @return void
+     */
+    public function testBulkEmptyIds(): void
+    {
+        $this->loginAs(1);
+        $this->post('/api/todos/bulk', json_encode(['action' => 'complete', 'ids' => []]));
+
+        $this->assertResponseCode(422);
+    }
+
+    /**
      * position ソートで Todo が position 昇順に返る
      *
      * @return void
