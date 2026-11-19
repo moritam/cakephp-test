@@ -40,6 +40,10 @@ function goToday() {
   currentMonth.value = today.getMonth() + 1
 }
 
+function fmt(y, m, d) {
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
 // カレンダーグリッド: 日曜始まり、42マス (6週)
 const calendarDays = computed(() => {
   const year = currentYear.value
@@ -47,21 +51,22 @@ const calendarDays = computed(() => {
   const firstDay = new Date(year, month - 1, 1).getDay() // 0=Sun
   const daysInMonth = new Date(year, month, 0).getDate()
   const daysInPrev = new Date(year, month - 1, 0).getDate()
+  const prevYear = month === 1 ? year - 1 : year
+  const prevMonth = month === 1 ? 12 : month - 1
+  const nextYear = month === 12 ? year + 1 : year
+  const nextMonth = month === 12 ? 1 : month + 1
 
   const cells = []
-  // 前月の末日から埋める
   for (let i = firstDay - 1; i >= 0; i--) {
     const d = daysInPrev - i
-    cells.push({ date: `${year}-${String(month - 1 || 12).padStart(2, '0')}-${String(d).padStart(2, '0')}`, day: d, currentMonth: false })
+    cells.push({ date: fmt(prevYear, prevMonth, d), day: d, currentMonth: false })
   }
-  // 当月
   for (let d = 1; d <= daysInMonth; d++) {
-    cells.push({ date: `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`, day: d, currentMonth: true })
+    cells.push({ date: fmt(year, month, d), day: d, currentMonth: true })
   }
-  // 次月で残りを埋める
   const remaining = 42 - cells.length
   for (let d = 1; d <= remaining; d++) {
-    cells.push({ date: `${year}-${String(month + 1 > 12 ? 1 : month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`, day: d, currentMonth: false })
+    cells.push({ date: fmt(nextYear, nextMonth, d), day: d, currentMonth: false })
   }
   return cells
 })
@@ -156,12 +161,12 @@ onMounted(loadTodos)
         </div>
       </div>
 
-      <!-- 日付グリッド -->
-      <div class="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-slate-700/60">
+      <!-- 日付グリッド (border-t border-l を外枠に持たせ、各セルは border-b border-r) -->
+      <div class="grid grid-cols-7 border-l border-t border-slate-100 dark:border-slate-700/60">
         <div
           v-for="cell in calendarDays"
           :key="cell.date"
-          class="min-h-[90px] p-1.5 relative"
+          class="min-h-[90px] p-1.5 relative border-r border-b border-slate-100 dark:border-slate-700/60"
           :class="cell.currentMonth ? 'bg-white dark:bg-slate-800' : 'bg-slate-50 dark:bg-slate-800/40'"
         >
           <!-- 日付番号 -->

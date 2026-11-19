@@ -14,7 +14,8 @@ export default defineConfig({
       output: {
         entryFileNames: 'assets/index.js',
         chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash][extname]',
+        assetFileNames: (info) =>
+          info.names?.includes('index.css') ? 'assets/index.css' : 'assets/[name]-[hash][extname]',
       },
     },
   },
