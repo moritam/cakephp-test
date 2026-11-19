@@ -240,7 +240,7 @@ async function remove(id, title) {
     </div>
 
     <!-- 検索・フィルターパネル -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-4">
+    <div class="page-card p-4 mb-4">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <div class="lg:col-span-1">
           <input
@@ -295,10 +295,10 @@ async function remove(id, title) {
     </div>
 
     <div v-if="loading" class="text-slate-500 dark:text-slate-400">読み込み中...</div>
-    <div v-else class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+    <div v-else class="page-card overflow-hidden">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-          <thead class="bg-slate-50 dark:bg-slate-900">
+          <thead class="bg-slate-50/80 dark:bg-slate-900/80">
             <tr>
               <th class="px-3 py-3 w-8">
                 <input

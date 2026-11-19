@@ -26,52 +26,44 @@ async function submit() {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-    <nav class="bg-white shadow-sm border-b border-slate-200">
+  <div class="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-14 items-center">
-          <span class="text-xl font-semibold text-slate-800">Todo App</span>
-          <div class="flex gap-4">
-            <router-link to="/login" class="text-slate-600 hover:text-slate-900 font-medium">ログイン</router-link>
-            <router-link to="/register" class="text-slate-600 hover:text-slate-900 font-medium">ユーザー登録</router-link>
+          <span class="text-lg font-bold bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">Todo App</span>
+          <div class="flex gap-1">
+            <router-link to="/login" class="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">ログイン</router-link>
+            <router-link to="/register" class="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">ユーザー登録</router-link>
           </div>
         </div>
       </div>
     </nav>
     <main class="max-w-4xl mx-auto w-full px-4 py-8 flex-1 flex items-center justify-center">
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 max-w-md w-full">
-        <h2 class="text-2xl font-bold text-slate-800 mb-6">ログイン</h2>
-        <form class="space-y-6" @submit.prevent="submit">
-          <div v-if="error" class="rounded-lg bg-red-50 text-red-800 border border-red-200 p-4 text-sm">
-            {{ error }}
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">メールアドレス</label>
-            <input
-              v-model="email"
-              type="email"
-              required
-              class="form-input"
-              autocomplete="email"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">パスワード</label>
-            <input
-              v-model="password"
-              type="password"
-              required
-              class="form-input"
-              autocomplete="current-password"
-            />
-          </div>
-          <button type="submit" class="btn-primary w-full" :disabled="loading">
-            {{ loading ? '送信中...' : 'ログイン' }}
-          </button>
-        </form>
-        <p class="mt-4 text-center text-sm text-slate-600">
-          <router-link to="/register" class="text-blue-600 hover:text-blue-800 font-medium">ユーザー登録</router-link>
-        </p>
+      <div class="page-card max-w-md w-full overflow-hidden">
+        <div class="h-1.5 bg-gradient-to-r from-blue-500 to-violet-500"></div>
+        <div class="p-8">
+          <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-6">ログイン</h2>
+          <form class="space-y-5" @submit.prevent="submit">
+            <div v-if="error" class="rounded-lg bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 p-3 text-sm">
+              {{ error }}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">メールアドレス</label>
+              <input v-model="email" type="email" required class="form-input" autocomplete="email" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">パスワード</label>
+              <input v-model="password" type="password" required class="form-input" autocomplete="current-password" />
+            </div>
+            <button type="submit" class="btn-primary w-full py-2.5" :disabled="loading">
+              {{ loading ? '送信中...' : 'ログイン' }}
+            </button>
+          </form>
+          <p class="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">
+            アカウントをお持ちでない方は
+            <router-link to="/register" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">ユーザー登録</router-link>
+          </p>
+        </div>
       </div>
     </main>
   </div>

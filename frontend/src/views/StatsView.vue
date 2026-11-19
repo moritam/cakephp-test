@@ -45,57 +45,53 @@ const priorityConfig = {
     <template v-else-if="stats">
       <!-- サマリーカード -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
-          <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">合計</p>
-          <p class="text-3xl font-bold text-slate-800 dark:text-slate-100">{{ stats.total }}</p>
-        </div>
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
-          <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">完了</p>
-          <p class="text-3xl font-bold text-green-600 dark:text-green-400">{{ stats.completed }}</p>
-        </div>
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
-          <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">未完了</p>
-          <p class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ stats.pending }}</p>
-        </div>
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
-          <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">期限切れ</p>
-          <p class="text-3xl font-bold" :class="stats.overdue > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-400'">
-            {{ stats.overdue }}
-          </p>
+        <div v-for="{ label, value, color } in [
+          { label: '合計', value: stats.total, color: 'from-blue-500 to-blue-600' },
+          { label: '完了', value: stats.completed, color: 'from-green-500 to-green-600' },
+          { label: '未完了', value: stats.pending, color: 'from-violet-500 to-violet-600' },
+          { label: '期限切れ', value: stats.overdue, color: stats.overdue > 0 ? 'from-red-500 to-red-600' : 'from-slate-400 to-slate-500' },
+        ]" :key="label"
+          class="page-card overflow-hidden"
+        >
+          <div class="h-1 bg-gradient-to-r" :class="color"></div>
+          <div class="p-5">
+            <p class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">{{ label }}</p>
+            <p class="text-4xl font-bold text-slate-800 dark:text-slate-100">{{ value }}</p>
+          </div>
         </div>
       </div>
 
       <!-- 完了率 -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
-        <div class="flex justify-between items-center mb-3">
-          <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">完了率</h3>
-          <span class="text-2xl font-bold text-slate-800 dark:text-slate-100">{{ completionRate }}%</span>
+      <div class="page-card p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">完了率</h3>
+          <span class="text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">{{ completionRate }}%</span>
         </div>
-        <div class="h-4 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+        <div class="h-3 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
           <div
-            class="h-full bg-green-500 dark:bg-green-400 rounded-full transition-all duration-700"
+            class="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-700"
             :style="{ width: completionRate + '%' }"
           ></div>
         </div>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">
           {{ stats.completed }} / {{ stats.total }} 件完了
         </p>
       </div>
 
       <!-- 優先度別内訳 -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-5">優先度別件数</h3>
+      <div class="page-card p-6">
+        <h3 class="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-5">優先度別件数</h3>
         <div class="space-y-4">
           <div v-for="(cfg, key) in priorityConfig" :key="key" class="flex items-center gap-4">
-            <span class="w-6 text-sm font-medium text-slate-600 dark:text-slate-400 text-right">{{ cfg.label }}</span>
-            <div class="flex-1 h-6 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+            <span class="w-6 text-sm font-semibold text-slate-500 dark:text-slate-400 text-right">{{ cfg.label }}</span>
+            <div class="flex-1 h-5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
               <div
                 class="h-full rounded-full transition-all duration-700"
                 :class="cfg.barClass"
                 :style="{ width: (stats.by_priority[key] / priorityMax * 100) + '%' }"
               ></div>
             </div>
-            <span class="w-8 text-sm font-semibold text-slate-700 dark:text-slate-300 text-right">
+            <span class="w-8 text-sm font-bold text-slate-700 dark:text-slate-300 text-right">
               {{ stats.by_priority[key] }}
             </span>
           </div>
