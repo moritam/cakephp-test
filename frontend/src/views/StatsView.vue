@@ -45,19 +45,24 @@ const priorityConfig = {
     <template v-else-if="stats">
       <!-- サマリーカード -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <div v-for="{ label, value, color } in [
-          { label: '合計', value: stats.total, color: 'from-blue-500 to-blue-600' },
-          { label: '完了', value: stats.completed, color: 'from-green-500 to-green-600' },
-          { label: '未完了', value: stats.pending, color: 'from-violet-500 to-violet-600' },
-          { label: '期限切れ', value: stats.overdue, color: stats.overdue > 0 ? 'from-red-500 to-red-600' : 'from-slate-400 to-slate-500' },
-        ]" :key="label"
-          class="page-card overflow-hidden"
+        <div class="rounded-2xl bg-blue-600 p-5 text-white shadow-lg shadow-blue-500/30">
+          <p class="text-xs font-semibold text-blue-100 uppercase tracking-wider mb-3">合計</p>
+          <p class="text-5xl font-bold">{{ stats.total }}</p>
+        </div>
+        <div class="rounded-2xl bg-emerald-500 p-5 text-white shadow-lg shadow-emerald-500/30">
+          <p class="text-xs font-semibold text-emerald-100 uppercase tracking-wider mb-3">完了</p>
+          <p class="text-5xl font-bold">{{ stats.completed }}</p>
+        </div>
+        <div class="rounded-2xl bg-violet-600 p-5 text-white shadow-lg shadow-violet-500/30">
+          <p class="text-xs font-semibold text-violet-100 uppercase tracking-wider mb-3">未完了</p>
+          <p class="text-5xl font-bold">{{ stats.pending }}</p>
+        </div>
+        <div
+          class="rounded-2xl p-5 text-white shadow-lg"
+          :class="stats.overdue > 0 ? 'bg-red-500 shadow-red-500/30' : 'bg-slate-400 shadow-slate-400/30'"
         >
-          <div class="h-1 bg-gradient-to-r" :class="color"></div>
-          <div class="p-5">
-            <p class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">{{ label }}</p>
-            <p class="text-4xl font-bold text-slate-800 dark:text-slate-100">{{ value }}</p>
-          </div>
+          <p class="text-xs font-semibold uppercase tracking-wider mb-3 opacity-80">期限切れ</p>
+          <p class="text-5xl font-bold">{{ stats.overdue }}</p>
         </div>
       </div>
 
