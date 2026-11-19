@@ -12,6 +12,7 @@ const error = ref('')
 const availableTags = ref([])
 const currentPage = ref(1)
 const PER_PAGE = 20
+const selectedIds = ref(new Set())
 
 const filters = ref({
   q: '',
@@ -26,12 +27,56 @@ const isManualSort = computed(() => filters.value.sort === 'position')
 const hasActiveFilters = computed(() =>
   filters.value.q || filters.value.priority || filters.value.completed || filters.value.tag_id,
 )
+const isAllSelected = computed(
+  () => todos.value.length > 0 && todos.value.every((t) => selectedIds.value.has(t.id)),
+)
+
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    selectedIds.value = new Set()
+  } else {
+    selectedIds.value = new Set(todos.value.map((t) => t.id))
+  }
+}
+
+function toggleSelect(id) {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
+
+async function bulkComplete() {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  try {
+    await api.bulkTodos('complete', ids)
+    todos.value.forEach((t) => { if (selectedIds.value.has(t.id)) t.completed = true })
+    selectedIds.value = new Set()
+  } catch (e) {
+    error.value = e.message || '一括完了に失敗しました。'
+  }
+}
+
+async function bulkDelete() {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  if (!confirm(`${ids.length} 件の Todo を削除してもよろしいですか？`)) return
+  try {
+    await api.bulkTodos('delete', ids)
+    todos.value = todos.value.filter((t) => !selectedIds.value.has(t.id))
+    selectedIds.value = new Set()
+  } catch (e) {
+    error.value = e.message || '一括削除に失敗しました。'
+  }
+}
 
 let searchTimer = null
 
 async function loadTodos() {
   loading.value = true
   error.value = ''
+  selectedIds.value = new Set()
   try {
     const params = { ...filters.value, page: currentPage.value, per_page: PER_PAGE }
     const data = await api.getTodos(params)
@@ -255,6 +300,16 @@ async function remove(id, title) {
         <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
           <thead class="bg-slate-50 dark:bg-slate-900">
             <tr>
+              <th class="px-3 py-3 w-8">
+                <input
+                  type="checkbox"
+                  :checked="isAllSelected"
+                  :indeterminate="selectedIds.size > 0 && !isAllSelected"
+                  class="rounded border-slate-300 dark:border-slate-600 text-blue-600"
+                  title="全選択 / 全解除"
+                  @change="toggleSelectAll"
+                />
+              </th>
               <th v-if="isManualSort && !hasActiveFilters" class="px-2 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase w-8"></th>
               <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">
                 <button type="button" class="flex items-center gap-1 hover:text-slate-800 dark:hover:text-slate-200" @click="toggleSort('priority')">
@@ -293,9 +348,19 @@ async function remove(id, title) {
                 'transition-colors',
                 isOverdue(todo)
                   ? 'bg-red-50 dark:bg-red-950 hover:bg-red-100 dark:hover:bg-red-900'
-                  : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700',
+                  : selectedIds.has(todo.id)
+                    ? 'bg-blue-50 dark:bg-blue-950'
+                    : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700',
               ]"
             >
+              <td class="px-3 py-3 w-8">
+                <input
+                  type="checkbox"
+                  :checked="selectedIds.has(todo.id)"
+                  class="rounded border-slate-300 dark:border-slate-600 text-blue-600"
+                  @change="toggleSelect(todo.id)"
+                />
+              </td>
               <td class="px-2 py-3 w-8">
                 <span class="drag-handle cursor-grab text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 select-none text-lg">⠿</span>
               </td>
@@ -341,7 +406,7 @@ async function remove(id, title) {
               </td>
             </tr>
             <tr v-if="todos.length === 0">
-              <td colspan="8" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">Todoが見つかりません。</td>
+              <td colspan="9" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">Todoが見つかりません。</td>
             </tr>
           </VueDraggable>
           <!-- 通常の tbody -->
@@ -353,9 +418,19 @@ async function remove(id, title) {
                 'transition-colors',
                 isOverdue(todo)
                   ? 'bg-red-50 dark:bg-red-950 hover:bg-red-100 dark:hover:bg-red-900'
-                  : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700',
+                  : selectedIds.has(todo.id)
+                    ? 'bg-blue-50 dark:bg-blue-950'
+                    : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700',
               ]"
             >
+              <td class="px-3 py-3 w-8">
+                <input
+                  type="checkbox"
+                  :checked="selectedIds.has(todo.id)"
+                  class="rounded border-slate-300 dark:border-slate-600 text-blue-600"
+                  @change="toggleSelect(todo.id)"
+                />
+              </td>
               <td class="px-4 py-3 whitespace-nowrap">
                 <span
                   v-if="todo.priority"
@@ -398,11 +473,41 @@ async function remove(id, title) {
               </td>
             </tr>
             <tr v-if="todos.length === 0">
-              <td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">Todoが見つかりません。</td>
+              <td colspan="8" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">Todoが見つかりません。</td>
             </tr>
           </tbody>
         </table>
       </div>
+    </div>
+
+    <!-- 一括操作バー -->
+    <div
+      v-if="selectedIds.size > 0"
+      class="fixed bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-full shadow-lg px-5 py-3"
+    >
+      <span class="text-sm text-slate-600 dark:text-slate-300 font-medium">{{ selectedIds.size }} 件選択中</span>
+      <button
+        type="button"
+        class="btn-secondary text-sm px-3 py-1"
+        @click="bulkComplete"
+      >
+        完了にする
+      </button>
+      <button
+        type="button"
+        class="text-sm px-3 py-1 rounded-lg bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+        @click="bulkDelete"
+      >
+        削除
+      </button>
+      <button
+        type="button"
+        class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none"
+        title="選択解除"
+        @click="selectedIds = new Set()"
+      >
+        ×
+      </button>
     </div>
 
     <!-- ページネーション -->

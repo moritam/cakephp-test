@@ -256,6 +256,44 @@ class TodosController extends AppController
     }
 
     /**
+     * 一括操作 (complete: 完了にする / delete: 削除)
+     *
+     * リクエスト: { action: 'complete'|'delete', ids: [1, 2, ...] }
+     *
+     * @return \Cake\Http\Response
+     */
+    public function bulk(): Response
+    {
+        $this->request->allowMethod(['post']);
+
+        $action = (string)($this->request->getData('action') ?? '');
+        $ids = $this->request->getData('ids');
+
+        if (!in_array($action, ['complete', 'delete'], true) || !is_array($ids) || count($ids) === 0) {
+            return $this->response
+                ->withStatus(422)
+                ->withType('application/json')
+                ->withStringBody((string)json_encode(
+                    ['errors' => ['action と ids (空でない配列) を指定してください']],
+                    JSON_THROW_ON_ERROR,
+                ));
+        }
+
+        $userId = $this->currentUserId();
+        $ids = array_map('intval', $ids);
+
+        if ($action === 'delete') {
+            $count = $this->Todos->deleteAll(['id IN' => $ids, 'user_id' => $userId]);
+        } else {
+            $count = $this->Todos->updateAll(['completed' => true], ['id IN' => $ids, 'user_id' => $userId]);
+        }
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody((string)json_encode(['success' => true, 'count' => $count], JSON_THROW_ON_ERROR));
+    }
+
+    /**
      * Delete todo
      *
      * @param string|null $id Todo id.

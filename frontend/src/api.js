@@ -131,6 +131,12 @@ export const api = {
     if (!r.ok) throw new Error(await r.text())
     return r.json()
   },
+
+  async bulkTodos(action, ids) {
+    const r = await request('/api/todos/bulk', { method: 'POST', body: { action, ids } })
+    if (!r.ok) throw new Error(await r.text())
+    return r.json()
+  },
 }
 
 /** 認証チェック（API が 401 を返すか） */
