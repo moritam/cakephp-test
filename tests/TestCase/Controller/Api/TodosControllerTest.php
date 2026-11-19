@@ -248,6 +248,60 @@ class TodosControllerTest extends TestCase
     }
 
     /**
+     * stats は合計・完了・未完了・期限切れ・優先度別件数を返す
+     *
+     * @return void
+     */
+    public function testStats(): void
+    {
+        $this->loginAs(1);
+        $this->get('/api/todos/stats');
+
+        $this->assertResponseOk();
+        $body = $this->json();
+        $this->assertArrayHasKey('total', $body);
+        $this->assertArrayHasKey('completed', $body);
+        $this->assertArrayHasKey('pending', $body);
+        $this->assertArrayHasKey('overdue', $body);
+        $this->assertArrayHasKey('by_priority', $body);
+        // alice は Todo 1 件 (フィクスチャー)
+        $this->assertSame(1, $body['total']);
+        $this->assertSame($body['total'], $body['completed'] + $body['pending']);
+    }
+
+    /**
+     * stats は自分の Todo だけを集計する (他ユーザーのものは含まない)
+     *
+     * @return void
+     */
+    public function testStatsReturnsOnlyOwnTodos(): void
+    {
+        $this->loginAs(1);
+        $this->get('/api/todos/stats');
+        $aliceTotal = $this->json()['total'];
+
+        $this->loginAs(2);
+        $this->get('/api/todos/stats');
+        $bobTotal = $this->json()['total'];
+
+        // alice と bob はそれぞれ 1 件ずつ
+        $this->assertSame(1, $aliceTotal);
+        $this->assertSame(1, $bobTotal);
+    }
+
+    /**
+     * stats は未認証で 401
+     *
+     * @return void
+     */
+    public function testStatsUnauthorized(): void
+    {
+        $this->get('/api/todos/stats');
+
+        $this->assertResponseCode(401);
+    }
+
+    /**
      * per_page パラメーターで取得件数を制御できる
      *
      * @return void
