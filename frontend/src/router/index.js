@@ -58,6 +58,11 @@ const routes = [
         name: 'Stats',
         component: () => import('../views/StatsView.vue'),
       },
+      {
+        path: 'calendar',
+        name: 'Calendar',
+        component: () => import('../views/CalendarView.vue'),
+      },
     ],
   },
 ]

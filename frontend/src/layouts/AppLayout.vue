@@ -54,6 +54,7 @@ onMounted(async () => {
             <router-link
               v-for="{ to, label } in [
                 { to: '/todos', label: 'Todo一覧' },
+                { to: '/calendar', label: 'カレンダー' },
                 { to: '/stats', label: '統計' },
                 { to: '/tags', label: 'タグ' },
                 { to: '/account', label: 'アカウント' },

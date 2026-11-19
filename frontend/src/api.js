@@ -143,6 +143,16 @@ export const api = {
     if (!r.ok) throw new Error(r.status === 401 ? 'Unauthorized' : await r.text())
     return r.json()
   },
+
+  async getCalendarTodos(year, month) {
+    const from = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0).getDate()
+    const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+    const r = await request(`/api/todos${buildQuery({ due_date_from: from, due_date_to: to, per_page: 200, sort: 'due_date', direction: 'asc' })}`)
+    if (!r.ok) throw new Error(r.status === 401 ? 'Unauthorized' : await r.text())
+    const data = await r.json()
+    return data.todos
+  },
 }
 
 /** 認証チェック（API が 401 を返すか） */

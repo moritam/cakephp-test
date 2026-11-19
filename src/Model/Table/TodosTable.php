@@ -93,6 +93,8 @@ class TodosTable extends Table
         string $completed = '',
         int $tagId = 0,
         bool $overdue = false,
+        string $dueDateFrom = '',
+        string $dueDateTo = '',
     ): SelectQuery {
         if ($q !== '') {
             $query->where(['Todos.title LIKE' => '%' . $q . '%']);
@@ -108,6 +110,12 @@ class TodosTable extends Table
         }
         if ($overdue) {
             $query->where(['Todos.due_date <' => Date::today()->toDateString(), 'Todos.completed' => false]);
+        }
+        if ($dueDateFrom !== '') {
+            $query->where(['Todos.due_date >=' => $dueDateFrom]);
+        }
+        if ($dueDateTo !== '') {
+            $query->where(['Todos.due_date <=' => $dueDateTo]);
         }
 
         return $query;

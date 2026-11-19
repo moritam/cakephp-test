@@ -51,6 +51,8 @@ class TodosController extends AppController
         $completed = (string)($this->request->getQuery('completed') ?? '');
         $tagId = (int)($this->request->getQuery('tag_id') ?? 0);
         $overdue = (bool)($this->request->getQuery('overdue') ?? false);
+        $dueDateFrom = (string)($this->request->getQuery('due_date_from') ?? '');
+        $dueDateTo = (string)($this->request->getQuery('due_date_to') ?? '');
 
         $sortField = (string)($this->request->getQuery('sort') ?? 'modified');
         $defaultDirection = $sortField === 'position' ? 'ASC' : 'DESC';
@@ -60,11 +62,11 @@ class TodosController extends AppController
             $sortField = 'modified';
         }
 
-        $perPage = min(50, max(1, (int)($this->request->getQuery('per_page') ?? 20)));
+        $perPage = min(200, max(1, (int)($this->request->getQuery('per_page') ?? 20)));
 
         $query = $this->Todos
             ->find('ownedBy', userId: $this->currentUserId())
-            ->find('filtered', q: $q, priority: $priority, completed: $completed, tagId: $tagId, overdue: $overdue)
+            ->find('filtered', q: $q, priority: $priority, completed: $completed, tagId: $tagId, overdue: $overdue, dueDateFrom: $dueDateFrom, dueDateTo: $dueDateTo)
             ->contain(['Tags'])
             ->orderBy(["Todos.{$sortField}" => $direction]);
 
