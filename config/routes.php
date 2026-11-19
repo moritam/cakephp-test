@@ -55,6 +55,7 @@ return function (RouteBuilder $routes): void {
         $builder->get('/todos', ['controller' => 'Todos', 'action' => 'index', 'prefix' => 'Api']);
         // 固定パスのルートは {id} より前に定義する
         $builder->get('/todos/export', ['controller' => 'Todos', 'action' => 'export', 'prefix' => 'Api']);
+        $builder->get('/todos/stats', ['controller' => 'Todos', 'action' => 'stats', 'prefix' => 'Api']);
         $builder->post('/todos/reorder', ['controller' => 'Todos', 'action' => 'reorder', 'prefix' => 'Api']);
         $builder->post('/todos/bulk', ['controller' => 'Todos', 'action' => 'bulk', 'prefix' => 'Api']);
         $builder->get('/todos/{id}', ['controller' => 'Todos', 'action' => 'view', 'prefix' => 'Api'])

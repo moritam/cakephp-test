@@ -256,6 +256,41 @@ class TodosController extends AppController
     }
 
     /**
+     * 統計情報 (合計・完了・未完了・期限切れ・優先度別件数)
+     *
+     * @return \Cake\Http\Response
+     */
+    public function stats(): Response
+    {
+        $this->request->allowMethod(['get']);
+        $userId = $this->currentUserId();
+        $today = date('Y-m-d');
+
+        $total = $this->Todos->find('ownedBy', userId: $userId)->count();
+        $completed = $this->Todos->find('ownedBy', userId: $userId)
+            ->where(['Todos.completed' => true])->count();
+        $overdue = $this->Todos->find('ownedBy', userId: $userId)
+            ->where(['Todos.completed' => false, 'Todos.due_date <' => $today,
+                'Todos.due_date IS NOT' => null])->count();
+
+        $byPriority = [];
+        foreach (['high', 'medium', 'low'] as $p) {
+            $byPriority[$p] = $this->Todos->find('ownedBy', userId: $userId)
+                ->where(['Todos.priority' => $p])->count();
+        }
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody((string)json_encode([
+                'total' => $total,
+                'completed' => $completed,
+                'pending' => $total - $completed,
+                'overdue' => $overdue,
+                'by_priority' => $byPriority,
+            ], JSON_THROW_ON_ERROR));
+    }
+
+    /**
      * 一括操作 (complete: 完了にする / delete: 削除)
      *
      * リクエスト: { action: 'complete'|'delete', ids: [1, 2, ...] }

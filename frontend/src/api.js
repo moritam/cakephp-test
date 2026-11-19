@@ -137,6 +137,12 @@ export const api = {
     if (!r.ok) throw new Error(await r.text())
     return r.json()
   },
+
+  async getTodoStats() {
+    const r = await request('/api/todos/stats')
+    if (!r.ok) throw new Error(r.status === 401 ? 'Unauthorized' : await r.text())
+    return r.json()
+  },
 }
 
 /** 認証チェック（API が 401 を返すか） */
