@@ -3,6 +3,7 @@ dist/
 logs/
 .env
 .DS_Store
+.vscode/
 tmp/todo_app.sqlite
 tmp/tests.sqlite
 tmp/cache/
