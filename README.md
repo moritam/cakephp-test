@@ -85,6 +85,44 @@ cd frontend && npm run dev
 
 ブラウザで `http://localhost:5173/app/` を開きます。
 
+## テスト
+
+### PHPUnit (バックエンド)
+
+```bash
+composer test
+```
+
+### Playwright E2E テスト
+
+事前準備:
+
+```bash
+cd e2e && npm install
+npx playwright install chromium
+```
+
+実行方法 (別ターミナルで CakePHP サーバーを起動してから):
+
+```bash
+# ターミナル 1
+bin/cake server -p 8765
+
+# ターミナル 2
+cd e2e && npm test
+```
+
+テスト一覧:
+
+| ファイル | 件数 | 内容 |
+|---|---|---|
+| `tests/auth.spec.js` | 5 | ログイン・ログアウト・リダイレクト |
+| `tests/todos.spec.js` | 9 | CRUD・フィルター・検索・一括操作 |
+| `tests/calendar.spec.js` | 6 | カレンダービュー |
+| `tests/stats.spec.js` | 6 | 統計カード |
+
+初回実行時にテストユーザー (`e2etest@example.com`) が自動作成され、ログイン状態が `e2e/.auth/state.json` に保存されます。
+
 ## API エンドポイント
 
 | メソッド | パス | 説明 |
