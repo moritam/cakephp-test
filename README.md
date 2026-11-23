@@ -123,6 +123,27 @@ cd e2e && npm test
 
 初回実行時にテストユーザー (`e2etest@example.com`) が自動作成され、ログイン状態が `e2e/.auth/state.json` に保存されます。
 
+## Claude Code 連携 (MCP)
+
+`.mcp.json` に SQLite MCP サーバー (`mcp-server-sqlite`) を設定しています。Claude Code から開発用 DB (`tmp/todo_app.sqlite`) のテーブルやデータを直接調べられます。
+
+前提条件:
+
+- [uv](https://docs.astral.sh/uv/) がインストールされ、`uvx` が PATH 上にあること
+- `bin/cake migrations migrate` で DB を作成済みであること (DB がないと空の DB に接続されます)
+
+使い方:
+
+1. プロジェクトで Claude Code を起動し、`.mcp.json` のサーバーを使うかの確認で許可する
+2. `/mcp` で `sqlite` が connected になっていることを確認する
+3. 「未完了の Todo を優先度ごとに数えて」のように頼むと、`list_tables` / `describe_table` / `read_query` などのツールが使われる
+
+注意:
+
+- `write_query` で開発用 DB を書き換えられます。実行前に確認が出るので内容を確かめてください。
+- `mcp` パッケージ 2.x では起動しないため、`--with "mcp<2"` で 1.x に固定しています。
+- `mcp-server-sqlite` はアーカイブ済み (メンテナンス終了) のリファレンス実装です。
+
 ## API エンドポイント
 
 | メソッド | パス | 説明 |
