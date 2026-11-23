@@ -64,9 +64,9 @@ class TodosTable extends Table
      *
      * 使い方: $this->Todos->find('ownedBy', userId: $userId)
      *
-     * @param \Cake\ORM\Query\SelectQuery $query The query.
+     * @param \Cake\ORM\Query\SelectQuery<\App\Model\Entity\Todo> $query The query.
      * @param int $userId オーナーのユーザー ID
-     * @return \Cake\ORM\Query\SelectQuery
+     * @return \Cake\ORM\Query\SelectQuery<\App\Model\Entity\Todo>
      */
     public function findOwnedBy(SelectQuery $query, int $userId): SelectQuery
     {
@@ -78,13 +78,13 @@ class TodosTable extends Table
      *
      * 使い方: $this->Todos->find('filtered', q: '...', priority: 'high', ...)
      *
-     * @param \Cake\ORM\Query\SelectQuery $query The query.
+     * @param \Cake\ORM\Query\SelectQuery<\App\Model\Entity\Todo> $query The query.
      * @param string $q キーワード検索
      * @param string $priority 優先度 (high|medium|low|'')
      * @param string $completed 完了状態 ('0'|'1'|'')
      * @param int $tagId タグ ID でフィルター (0 = 未指定)
      * @param bool $overdue 期限切れのみ
-     * @return \Cake\ORM\Query\SelectQuery
+     * @return \Cake\ORM\Query\SelectQuery<\App\Model\Entity\Todo>
      */
     public function findFiltered(
         SelectQuery $query,

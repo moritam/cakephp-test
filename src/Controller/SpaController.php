@@ -23,9 +23,9 @@ class SpaController extends AppController
     /**
      * ルート / を /app へリダイレクト
      *
-     * @return \Cake\Http\Response
+     * @return \Cake\Http\Response|null
      */
-    public function redirectToApp(): Response
+    public function redirectToApp(): ?Response
     {
         return $this->redirect('/app');
     }

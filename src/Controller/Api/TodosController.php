@@ -5,6 +5,7 @@ namespace App\Controller\Api;
 
 use App\Controller\AppController;
 use App\Model\Entity\Todo;
+use Cake\Http\Exception\UnauthorizedException;
 use Cake\Http\Response;
 
 /**
@@ -66,7 +67,16 @@ class TodosController extends AppController
 
         $query = $this->Todos
             ->find('ownedBy', userId: $this->currentUserId())
-            ->find('filtered', q: $q, priority: $priority, completed: $completed, tagId: $tagId, overdue: $overdue, dueDateFrom: $dueDateFrom, dueDateTo: $dueDateTo)
+            ->find(
+                'filtered',
+                q: $q,
+                priority: $priority,
+                completed: $completed,
+                tagId: $tagId,
+                overdue: $overdue,
+                dueDateFrom: $dueDateFrom,
+                dueDateTo: $dueDateTo,
+            )
             ->contain(['Tags'])
             ->orderBy(["Todos.{$sortField}" => $direction]);
 
@@ -352,7 +362,13 @@ class TodosController extends AppController
      */
     private function currentUserId(): int
     {
-        return (int)$this->Authentication->getIdentity()->getIdentifier();
+        $identity = $this->Authentication->getIdentity();
+        if ($identity === null) {
+            // ApiUnauthorizedMiddleware が未認証を弾くので通常は到達しない
+            throw new UnauthorizedException();
+        }
+
+        return (int)$identity->getIdentifier();
     }
 
     /**

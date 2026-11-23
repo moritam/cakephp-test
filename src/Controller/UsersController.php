@@ -22,7 +22,7 @@ class UsersController extends AppController
     /**
      * 認証不要のアクション (ログアウトは未ログインでも成功扱いにする)
      *
-     * @param \Cake\Event\EventInterface $event The event.
+     * @param \Cake\Event\EventInterface<\Cake\Controller\Controller> $event The event.
      * @return void
      */
     public function beforeFilter(EventInterface $event): void
@@ -50,9 +50,9 @@ class UsersController extends AppController
      *
      * 認証自体は Authentication ミドルウェアの Form 認証が行い、ここでは結果を返す。
      *
-     * @return \Cake\Http\Response
+     * @return \Cake\Http\Response|null
      */
-    public function login(): Response
+    public function login(): ?Response
     {
         if (!$this->request->is('post')) {
             return $this->redirect('/app/login');
@@ -72,9 +72,9 @@ class UsersController extends AppController
     /**
      * ログアウト
      *
-     * @return \Cake\Http\Response
+     * @return \Cake\Http\Response|null
      */
-    public function logout(): Response
+    public function logout(): ?Response
     {
         $this->Authentication->logout();
 
@@ -88,9 +88,9 @@ class UsersController extends AppController
     /**
      * ユーザー登録 (POST)
      *
-     * @return \Cake\Http\Response
+     * @return \Cake\Http\Response|null
      */
-    public function add(): Response
+    public function add(): ?Response
     {
         if (!$this->request->is('post')) {
             return $this->redirect('/app/register');
