@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat); echo \"$input\" | python3 -c \"\nimport sys, json\ndata = json.load(sys.stdin)\ncmd = data.get('tool_input', {}).get('command', '')\nif '--force' in cmd or '-f' in cmd.split() and 'push' in cmd:\n    print('force push はブロックされています。通常の git push を使ってください。', file=sys.stderr)\n    sys.exit(2)\n\""
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-force-push.py\""
           }
         ]
       }
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd /Users/moritanhayato/works/todo_app && echo '=== git status ===' && git status --short"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/git-status-summary.sh\""
           }
         ]
       }
@@ -49,7 +49,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd /Users/moritanhayato/works/todo_app && php_files=$(git diff --name-only HEAD 2>/dev/null | grep '\\.php$'); if [ -n \"$php_files\" ]; then composer cs-fix --quiet 2>/dev/null; fi; true"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/phpcbf-edited-file.sh\"",
+            "timeout": 30
           }
         ]
       }
