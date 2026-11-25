@@ -71,7 +71,7 @@ cd frontend && npm run build
 npm run build
 ```
 
-開発用 DB の中身を調べるときは、SQLite MCP サーバー (`.mcp.json`、ツール名 `mcp__sqlite__*`) が使える。読み取りは `read_query` を使い、`write_query` / `create_table` でスキーマやデータを変えない (スキーマ変更はマイグレーションで行う)。サーバーには `uv` が必要で、`mcp<2` に固定している (2.x では起動しない)。
+開発用 DB の中身を調べるときは、DBHub MCP サーバー (`.mcp.json` + `.dbhub.toml`、ツール名 `mcp__dbhub__*`) を使う。`execute_sql` は読み取り専用 (最大 100 行)、`search_objects` でスキーマを検索、`overdue_todos` は期限切れ Todo のカスタムツール。スキーマやデータの変更はマイグレーションやアプリから行う。`users.password` (ハッシュ) は SELECT しない。
 
 開発時は Vite (5173) が `/api`・`/users`・`/css` を CakePHP (8765) へプロキシする (`frontend/vite.config.js`)。
 本番相当では `frontend` をビルドし、CakePHP の `/app` から配信する。

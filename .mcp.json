@@ -1,14 +1,17 @@
 {
   "mcpServers": {
-    "sqlite": {
-      "command": "uvx",
+    "dbhub": {
+      "type": "stdio",
+      "command": "npx",
       "args": [
-        "--with",
-        "mcp<2",
-        "mcp-server-sqlite",
-        "--db-path",
-        "tmp/todo_app.sqlite"
-      ]
+        "-y",
+        "@bytebase/dbhub@2.1.0",
+        "--transport",
+        "stdio",
+        "--config",
+        ".dbhub.toml"
+      ],
+      "env": {}
     }
   }
 }

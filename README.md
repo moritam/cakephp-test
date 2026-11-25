@@ -125,24 +125,28 @@ cd e2e && npm test
 
 ## Claude Code 連携 (MCP)
 
-`.mcp.json` に SQLite MCP サーバー (`mcp-server-sqlite`) を設定しています。Claude Code から開発用 DB (`tmp/todo_app.sqlite`) のテーブルやデータを直接調べられます。
+`.mcp.json` に [DBHub](https://github.com/bytebase/dbhub) (MCP サーバー) を設定しています。Claude Code から開発用 DB (`tmp/todo_app.sqlite`) のテーブルやデータを直接調べられます。DBHub の設定は `.dbhub.toml` にあります。
 
 前提条件:
 
-- [uv](https://docs.astral.sh/uv/) がインストールされ、`uvx` が PATH 上にあること
-- `bin/cake migrations migrate` で DB を作成済みであること (DB がないと空の DB に接続されます)
+- Node.js 22.5 以上 (DBHub が Node 組み込みの `node:sqlite` を使うため)
+- `bin/cake migrations migrate` で DB を作成済みであること
 
 使い方:
 
 1. プロジェクトで Claude Code を起動し、`.mcp.json` のサーバーを使うかの確認で許可する
-2. `/mcp` で `sqlite` が connected になっていることを確認する
-3. 「未完了の Todo を優先度ごとに数えて」のように頼むと、`list_tables` / `describe_table` / `read_query` などのツールが使われる
+2. `/mcp` で `dbhub` が connected になっていることを確認する
+3. 「未完了の Todo を優先度ごとに数えて」のように頼むと、次のツールが使われる
 
-注意:
+| ツール | 内容 |
+|---|---|
+| `execute_sql` | SQL を実行する。**読み取り専用** (SELECT / WITH / EXPLAIN / PRAGMA のみ)、最大 100 行 |
+| `search_objects` | テーブル・カラム・インデックスを検索する |
+| `overdue_todos` | カスタムツール。期限切れで未完了の Todo を一覧する (`email` で絞り込み可) |
 
-- `write_query` で開発用 DB を書き換えられます。実行前に確認が出るので内容を確かめてください。
-- `mcp` パッケージ 2.x では起動しないため、`--with "mcp<2"` で 1.x に固定しています。
-- `mcp-server-sqlite` はアーカイブ済み (メンテナンス終了) のリファレンス実装です。
+これらのツールは `.claude/settings.json` で許可済みなので、実行時の確認は出ません。
+
+カスタムツールを増やすときは `.dbhub.toml` に `[[tools]]` を追加し、`.claude/settings.json` の `permissions.allow` に `mcp__dbhub__<ツール名>` を追加します。SQLite のプレースホルダーは `?` で、同じ `?` を 2 回書くと 2 つのパラメーターとして数えられます。
 
 ## API エンドポイント
 

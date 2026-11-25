@@ -10,7 +10,10 @@
       "Bash(composer test*)",
       "Bash(composer cs-check*)",
       "Bash(composer cs-fix*)",
-      "Bash(bin/cake migrations migrate*)"
+      "Bash(bin/cake migrations migrate*)",
+      "mcp__dbhub__execute_sql",
+      "mcp__dbhub__search_objects",
+      "mcp__dbhub__overdue_todos"
     ],
     "deny": [
       "Bash(git push --force*)",

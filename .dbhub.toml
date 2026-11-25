@@ -1,0 +1,44 @@
+# DBHub (MCP サーバー) の設定。.mcp.json の dbhub サーバーから読み込まれる。
+# https://github.com/bytebase/dbhub
+
+[[sources]]
+id = "todo_app"
+description = "Todo アプリの開発用 DB (SQLite)"
+# "sqlite:///./" で始まるパスは、この設定ファイルからの相対パス
+dsn = "sqlite:///./tmp/todo_app.sqlite"
+
+# SQL の実行は読み取り専用 (SELECT / WITH / EXPLAIN / PRAGMA だけ)。
+# スキーマやデータの変更はマイグレーションやアプリから行う。
+[[tools]]
+name = "execute_sql"
+source = "todo_app"
+readonly = true
+max_rows = 100
+
+# テーブル・カラム・インデックスの検索
+[[tools]]
+name = "search_objects"
+source = "todo_app"
+
+# カスタムツール: 期限切れの未完了 Todo (ユーザーのメールアドレスで絞り込み可)
+[[tools]]
+name = "overdue_todos"
+description = "期限切れで未完了の Todo を、期限の古い順に一覧する。email を指定するとそのユーザーの Todo だけに絞り込む"
+source = "todo_app"
+readonly = true
+max_rows = 100
+statement = """
+  SELECT t.id, t.title, t.priority, t.due_date, u.email
+  FROM todos t
+  JOIN users u ON u.id = t.user_id
+  WHERE t.completed = 0
+    AND t.due_date < date('now', 'localtime')
+    AND u.email = COALESCE(?, u.email)
+  ORDER BY t.due_date, t.id
+"""
+
+[[tools.parameters]]
+name = "email"
+type = "string"
+description = "ユーザーのメールアドレス (省略するとすべてのユーザー)"
+required = false
