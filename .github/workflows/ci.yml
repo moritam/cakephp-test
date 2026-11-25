@@ -38,11 +38,16 @@ jobs:
         ini-values: zend.assertions=1
         coverage: none
 
+    # composer.json の config.platform.php (8.2) は lock を PHP 8.2 向けに保つための設定。
+    # highest のジョブでは外して、実行中の PHP で使える最新の依存を試す。
+    - name: Unpin platform PHP for highest dependencies
+      if: matrix.dependencies == 'highest'
+      run: composer config --unset platform.php
+
     - name: Composer install
       uses: ramsey/composer-install@v3
       with:
         dependency-versions: ${{ matrix.dependencies }}
-        composer-options: ${{ matrix.composer-options }}
 
     - name: Composer post install
       run: composer run-script post-install-cmd --no-interaction
