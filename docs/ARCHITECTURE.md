@@ -2,6 +2,18 @@
 
 CakePHP 5（JSON API・認証）と Vue 3（SPA）で構成した Todo アプリケーションの構成図です。
 
+## 全体図（D2）
+
+ブラウザからミドルウェア・コントローラー・モデルを経て SQLite に至るまでを 1 枚にまとめた図です。
+
+![Todo App 全体構成](architecture.svg)
+
+ソースは [architecture.d2](architecture.d2) です。[D2](https://d2lang.com/) で次のように再生成します。
+
+```bash
+d2 --layout elk docs/architecture.d2 docs/architecture.svg
+```
+
 ---
 
 ## 1. 全体アーキテクチャ

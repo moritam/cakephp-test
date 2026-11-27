@@ -1,0 +1,193 @@
+# Todo App 全体構成図
+# 描画: d2 --layout elk docs/architecture.d2 docs/architecture.svg
+# プレビュー: d2 --watch --layout elk docs/architecture.d2
+
+vars: {
+  d2-config: {
+    layout-engine: elk
+  }
+}
+
+direction: down
+
+title: |md
+  # Todo App 全体構成 (CakePHP 5 + Vue 3)
+| {near: top-center}
+
+classes: {
+  mw: {
+    style: {
+      fill: "#fff7e6"
+      stroke: "#d48806"
+      border-radius: 4
+    }
+  }
+  ctrl: {
+    style: {
+      fill: "#e6f4ff"
+      stroke: "#1677ff"
+    }
+  }
+  model: {
+    style: {
+      fill: "#f6ffed"
+      stroke: "#389e0d"
+    }
+  }
+  view: {
+    style: {
+      fill: "#f9f0ff"
+      stroke: "#722ed1"
+    }
+  }
+}
+
+# ---------------------------------------------------------------
+# ブラウザ (Vue 3 SPA)
+# ---------------------------------------------------------------
+browser: ブラウザ {
+  spa: Vue 3 SPA (/app/) {
+
+    main: "main.js / App.vue"
+    router: "router/index.js\n認証ガード"
+    layout: "AppLayout.vue\nナビ・ログアウト・ダークモード"
+
+    views: views {
+      grid-columns: 3
+      login: LoginView {class: view}
+      register: RegisterView {class: view}
+      list: "TodoListView\n検索・フィルター・ソート" {class: view}
+      detail: TodoDetailView {class: view}
+      form: "TodoFormView\n追加・編集" {class: view}
+      tags: TagListView {class: view}
+      stats: StatsView {class: view}
+      calendar: CalendarView {class: view}
+      account: "AccountView\nパスワード変更" {class: view}
+    }
+
+    api_js: "api.js\nfetch + Cookie\nX-CSRF-Token 自動付与\n403 なら取り直して 1 回再送"
+
+    main -> router
+    router -> layout
+    layout -> views
+    views -> api_js
+  }
+
+  storage: "localStorage\n(ダークモード設定)" {shape: cylinder}
+  spa.layout -> storage: 保存・復元 {style.stroke-dash: 3}
+}
+
+# ---------------------------------------------------------------
+# 開発用 Vite サーバー
+# ---------------------------------------------------------------
+vite: "Vite 開発サーバー\n:5173 (開発時のみ)" {
+  style.stroke-dash: 4
+}
+
+# ---------------------------------------------------------------
+# CakePHP 5 バックエンド
+# ---------------------------------------------------------------
+cake: "CakePHP 5.3 (:8765)" {
+  middleware: "ミドルウェア (①→⑩ の順に実行)" {
+    grid-rows: 2
+    grid-columns: 5
+    grid-gap: 24
+    error: "① ErrorHandlerMiddleware" {class: mw}
+    proxy: "② TrustProxyMiddleware\nX-Forwarded-For → 接続元 IP" {class: mw}
+    host: "③ HostHeaderMiddleware\n本番の Host ヘッダー検証" {class: mw}
+    asset: "④ AssetMiddleware" {class: mw}
+    routing: "⑤ RoutingMiddleware\nconfig/routes.php" {class: mw}
+    body: "⑥ BodyParserMiddleware" {class: mw}
+    csrf: "⑦ CsrfProtectionMiddleware\n全 POST/PUT/PATCH/DELETE で検証" {class: mw}
+    throttle: "⑧ LoginThrottleMiddleware\nログイン失敗の制限 → 429" {class: mw}
+    auth: "⑨ AuthenticationMiddleware\nセッション / email+password" {class: mw}
+    unauth: "⑩ ApiUnauthorizedMiddleware\n/api 未認証 → 401 JSON" {class: mw}
+  }
+
+  ratelimit: "Cache: rate_limit\nログイン失敗カウント\n(15 分枠)" {shape: stored_data}
+  middleware.throttle -> ratelimit: カウント増減
+
+  controllers: Controllers {
+    direction: down
+    spa: "SpaController\nGET / → /app\nGET /app, /app/*" {class: ctrl}
+    users: "UsersController (JSON)\nPOST /users/add\nPOST /users/login\nPOST /users/logout\nGET /users/csrf-token\nPATCH /users/change-password" {class: ctrl}
+    todos: "Api\\TodosController\nGET/POST /api/todos\nGET/PUT/PATCH/DELETE /api/todos/:id\nGET /api/todos/export\nGET /api/todos/stats\nPOST /api/todos/reorder\nPOST /api/todos/bulk" {class: ctrl}
+    tags: "Api\\TagsController\nGET/POST /api/tags\nDELETE /api/tags/:id" {class: ctrl}
+  }
+
+  models: Model (Table) {
+    direction: down
+    todos_t: "TodosTable\nfind('ownedBy') / find('filtered')" {class: model}
+    users_t: UsersTable {class: model}
+    tags_t: TagsTable {class: model}
+  }
+
+  templates: "templates/layout/spa.php\n/app/assets/index.js を読み込む"
+  webroot: "webroot/app/\nフロントのビルド成果物" {shape: package}
+
+  middleware -> controllers
+
+  controllers.spa -> templates
+  templates -> webroot: 参照
+  controllers.users -> models.users_t
+  controllers.todos -> models.todos_t: "user_id で絞り込み\n他人の Todo は 404"
+  controllers.tags -> models.tags_t
+  models.todos_t -> models.tags_t: BelongsToMany
+}
+
+# ---------------------------------------------------------------
+# 永続化
+# ---------------------------------------------------------------
+db: "SQLite\ntmp/todo_app.sqlite" {
+  users: {
+    shape: sql_table
+    id: integer {constraint: primary_key}
+    email: string {constraint: unique}
+    password: "string (hash)"
+    created: datetime
+    modified: datetime
+  }
+  todos: {
+    shape: sql_table
+    id: integer {constraint: primary_key}
+    user_id: integer {constraint: foreign_key}
+    title: string
+    description: text
+    priority: "string (high/medium/low)"
+    due_date: date
+    completed: boolean
+    position: integer
+    created: datetime
+    modified: datetime
+  }
+  tags: {
+    shape: sql_table
+    id: integer {constraint: primary_key}
+    name: string
+    color: string
+    created: datetime
+    modified: datetime
+  }
+  tags_todos: {
+    shape: sql_table
+    tag_id: integer {constraint: foreign_key}
+    todo_id: integer {constraint: foreign_key}
+  }
+
+  todos.user_id -> users.id
+  tags_todos.todo_id -> todos.id
+  tags_todos.tag_id -> tags.id
+}
+
+
+# ---------------------------------------------------------------
+# 接続
+# ---------------------------------------------------------------
+browser.spa.api_js -> cake.middleware: "JSON API (本番: 同一オリジン)\nCookie: TODOAPP_SESSION / csrfToken"
+browser.spa.api_js -> vite: "開発時: /api /users /css" {style.stroke-dash: 4}
+vite -> cake.middleware: プロキシ {style.stroke-dash: 4}
+
+cake.models.users_t -> db.users
+cake.models.todos_t -> db.todos
+cake.models.tags_t -> db.tags
+cake.models.todos_t -> db.tags_todos
